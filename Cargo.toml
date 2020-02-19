@@ -1,0 +1,13 @@
+[package]
+name = "cargo-dephell"
+version = "0.1.0"
+authors = ["David Wong <davidwg@calibra.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ignore = "0.4.11" # to walk through files of a directory
+guppy = "0.1.4"   # to analyze dependencies
+geiger = "0.4.3"  # to calculate number of unsafe lines of code
+loc = "0.5.0"     # to calculate number of lines of code
