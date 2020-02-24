@@ -64,6 +64,8 @@ dependencies = [
  "guppy",
  "ignore",
  "loc",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

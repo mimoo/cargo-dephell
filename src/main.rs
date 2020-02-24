@@ -8,26 +8,30 @@ const USAGE: &str = "
         cargo dephell [--manifest-path PATH]
 ";
 
-const CRATES_PATH: &str = "~/.cargo/registry/src/github.com-1ecc6299db9ec823/";
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct PackageRisk<'a> {
+    name: &'a str,
+    is_dev: bool,
 
-#[derive(Default)]
-struct PackageRisk {
-    // number of total third party dependencies imported
+    // total number of transitive third party dependencies imported
     // by this dependency (not including this dependency)
     total_third_deps: u64,
+    // total number of transitive third party dependencies imported
+    // by this dependency, and only this dependency
+    total_new_third_deps: u64,
     // number of lines-of-code for this dependency as well as
     // all the third party dependencies it imports
-    total_loc: u64,
+    loc: u64,
     // number of lines of unsafe code for this dependency as
     // well as all the third party dependencies it imports
-    total_unsafe_loc: u64,
+    unsafe_loc: u64,
 }
 
-impl PackageRisk {
+impl PackageRisk<'_> {
     fn risk_score(&self) -> u64 {
         let mut risk_score = self.total_third_deps * 5000;
-        risk_score += self.total_loc;
-        risk_score += self.total_unsafe_loc * 5000;
+        risk_score += self.loc;
+        risk_score += self.unsafe_loc * 5000;
         risk_score
     }
 }
@@ -86,7 +90,14 @@ fn main() {
         for dependency_link in importers {
             // it is imported by a root dependency
             if root_deps.contains(dependency_link.from.id()) {
-                direct_deps.insert(package_id, PackageRisk::default());
+                // metadata
+                let mut package_risk = PackageRisk::default();
+                //            let package_metadata = package_graph.metadata(package_id).unwrap();
+                //            package_risk.package_name = package_metadata.name();
+                package_risk.name = dependency_link.edge.dep_name();
+                package_risk.is_dev = dependency_link.edge.dev_only();
+                // insert
+                direct_deps.insert(package_id, package_risk);
                 break;
             }
         }
@@ -94,9 +105,9 @@ fn main() {
 
     // rank every direct dependency
     for (direct_dep, package_risk) in direct_deps.iter_mut() {
+        // find out every transitive dependencies
         let mut to_analyze = HashSet::new();
         to_analyze.insert(*direct_dep);
-        // find out every transitive dependencies
         for possible_dep in package_graph.package_ids() {
             // ignore root dependencies
             if root_deps.contains(possible_dep) {
@@ -114,7 +125,7 @@ fn main() {
             // get path to dependency
             let package_path = package_metadata.manifest_path().parent().unwrap();
 
-            //
+            // TODO: use WalkParallel?
             let walker = ignore::WalkBuilder::new(package_path).build();
             for result in walker {
                 let file = result.unwrap();
@@ -131,7 +142,7 @@ fn main() {
                 if lang != loc::Lang::Unrecognized {
                     let count = loc::count(filepath);
                     // update
-                    package_risk.total_loc += u64::from(count.code);
+                    package_risk.loc += u64::from(count.code);
                 }
 
                 // look for unsafe lines of code (not including tests)
@@ -145,7 +156,7 @@ fn main() {
                     unsafe_loc += res.counters.item_impls.unsafe_;
                     unsafe_loc += res.counters.item_traits.unsafe_;
                     unsafe_loc += res.counters.methods.unsafe_;
-                    package_risk.total_unsafe_loc += unsafe_loc;
+                    package_risk.unsafe_loc += unsafe_loc;
                 }
             }
         }
@@ -153,18 +164,15 @@ fn main() {
 
     // sort result (via Btrees)
     use std::collections::btree_map::BTreeMap;
-    let mut deps_by_risk: BTreeMap<u64, &PackageId> = BTreeMap::new();
-    for (package_id, package_risk) in direct_deps.iter() {
+    let mut deps_by_risk: BTreeMap<u64, &PackageRisk> = BTreeMap::new();
+    for (_, package_risk) in direct_deps.iter() {
         let risk = package_risk.risk_score();
-        deps_by_risk.insert(risk, package_id);
+        deps_by_risk.insert(risk, package_risk);
     }
-    // print result
-    for (risk, package_id) in deps_by_risk.iter().rev() {
-        let name = package_graph.metadata(package_id).unwrap().name();
-        println!("[{} - risk: {}]", name, risk);
-        let package_risk = direct_deps.get(package_id).unwrap();
-        println!("  - total deps: {}", package_risk.total_third_deps);
-        println!("  - total loc: {}", package_risk.total_loc);
-        println!("  - total unsafe loc: {}", package_risk.total_unsafe_loc);
-    }
+
+    // print result order by risk_score DESCENDING
+    let deps_by_risk_reverted: Vec<&PackageRisk> =
+        deps_by_risk.iter().rev().map(|item| *item.1).collect();
+    let j = serde_json::to_string(&deps_by_risk_reverted).unwrap();
+    println!("{}", j);
 }

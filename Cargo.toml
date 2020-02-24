@@ -11,3 +11,6 @@ ignore = "0.4.11" # to walk through files of a directory
 guppy = "0.1.4"   # to analyze dependencies
 geiger = "0.4.3"  # to calculate number of unsafe lines of code
 loc = "0.5.0"     # to calculate number of lines of code
+
+serde = "1.0"      # to print the result as JSON
+serde_json = "1.0" # to print the result as JSON
