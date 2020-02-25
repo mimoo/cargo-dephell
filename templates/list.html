@@ -55,17 +55,19 @@
                     <th>internal packages depending on this dependency</th>
                     <th>LOC</th>
                     <th>unsafe LOC</th>
+                    <th># of stars on github</th>
                 </tr>
             </thead>
             <tbody>
                 {% for package in packages %}
                 <tr>
-                    <th>{{ package.name }}</th>
+                    <th><a href="{{package.repo}}">{{ package.name }}</a></th>
                     <th>{{ package.is_dev }}</th>
                     <th>{{ package.total_third_deps }}</th>
                     <th>{{ package.total_new_third_deps }}</th>
                     <th>{{ package.loc }}</th>
                     <th>{{ package.unsafe_loc }}</th>
+                    <th>{{ package.stargazers_count }}</th>
                 </tr>
                 {% endfor %}
             </tbody>
