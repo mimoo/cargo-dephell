@@ -62,7 +62,7 @@
             </thead>
             <tbody>
                 {% for package in packages %}
-                <tr>
+                <tr {% if package.is_dev %}class="dev"{% endif %}>
                     <th><a href="{{package.repo}}">{{ package.name }}</a></th>
                     <th>{{ package.is_dev }}</th>
                     <th>{{ package.total_third_deps }}</th>
