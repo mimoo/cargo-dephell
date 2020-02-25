@@ -158,6 +158,7 @@ fn main() {
                     geiger::IncludeTests::No,
                 ) {
                     // update
+                    // TODO: this gives bad results for some reason
                     let mut unsafe_loc = res.counters.functions.unsafe_;
                     unsafe_loc += res.counters.exprs.unsafe_;
                     unsafe_loc += res.counters.item_impls.unsafe_;
