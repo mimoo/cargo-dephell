@@ -21,10 +21,11 @@
 
         table {
             border-collapse: collapse;
+            width: 100%;
         }
 
         td {
-            line-height: 23px;
+            line-height: 30px;
             font-size: 18px;
         }
 
@@ -46,6 +47,7 @@
     <div class="container">
         <h1>Cargo-dephell</h1>
         <p>This is a list of dependencies collected from {{ path }}.</p>
+        <button id="no_dev">toggle dev dependencies</button>
         <table>
             <thead>
                 <tr>
@@ -73,6 +75,12 @@
             </tbody>
         </table>
     </div>
+
+    <script>
+        document.querySelector("#no_dev").addEventListener("click", () => {
+            document.querySelector(".dev")
+        })
+    </script>
 </body>
 
 </html>
