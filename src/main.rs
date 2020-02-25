@@ -1,13 +1,14 @@
 use askama::Template;
 use clap::{App, Arg};
-use guppy::graph::PackageGraph;
+use guppy::graph::{DependencyDirection, PackageGraph};
 use guppy::{MetadataCommand, PackageId};
 use std::fs::File;
 use std::io::prelude::*;
 
 #[derive(Template)]
 #[template(path = "list.html")]
-struct HtmlList<'a, 'b> {
+struct HtmlList<'a, 'b, 'c> {
+    path: &'c str;
     packages: Vec<&'a PackageRisk<'b>>,
 }
 
@@ -94,16 +95,14 @@ fn main() {
         if root_deps.contains(package_id) {
             continue;
         }
-        // unwrap: if it's not a root deps, it is being imported
+        // who's importing it?
         let importers = package_graph.reverse_dep_links(package_id).unwrap();
         for dependency_link in importers {
-            // it is imported by a root dependency
+            // it is imported by a root dependency, add it
             if root_deps.contains(dependency_link.from.id()) {
-                // metadata
                 let mut package_risk = PackageRisk::default();
                 package_risk.name = dependency_link.edge.dep_name();
                 package_risk.is_dev = dependency_link.edge.dev_only();
-                // insert
                 direct_deps.insert(package_id, package_risk);
                 break;
             }
@@ -112,6 +111,11 @@ fn main() {
 
     // rank every direct dependency
     for (direct_dep, package_risk) in direct_deps.iter_mut() {
+        // check how many root pkgs end up making use of this dependency
+        let root_importers = package_graph.select_reverse(vec![*direct_dep]).unwrap();
+        let root_importers = root_importers.into_iter_metadatas(Some(DependencyDirection::Reverse));
+        package_risk.total_new_third_deps = root_importers.len() as u64;
+
         // find out every transitive dependencies
         let mut to_analyze = HashSet::new();
         to_analyze.insert(*direct_dep);
@@ -187,6 +191,7 @@ fn main() {
         }
         Some(html_output) => {
             let html_page = HtmlList {
+                path: manifest_path,
                 packages: deps_by_risk_reverted,
             };
             let mut file = match File::create(html_output) {

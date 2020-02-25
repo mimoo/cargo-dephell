@@ -1,34 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>cargo-dephell</title>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Roboto:100,400,700&display=swap');
+
+        * {
+            font-family: Roboto;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        td {
+            line-height: 23px;
+            font-size: 18px;
+        }
+
+        thead {
+            color: #FFFFFF;
+            background-color: #6c7ae0;
+            vertical-align: middle;
+        }
+
+        th {}
+
+        tr:nth-child(even) {
+            background-color: #f8f6ff;
+        }
+    </style>
 </head>
+
 <body>
-    <h1>Cargo-dephell</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>package name</th>
-                <th>dev?</th>
-                <th>dependencies imported</th>
-                <th>LOC</th>
-                <th>unsafe LOC</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for package in packages %}
-            <tr>
-                <th>{{ package.name }}</th>
-                <th>{{ package.is_dev }}</th>
-                <th>{{ package.total_third_deps }}</th>
-                <th>{{ package.total_new_third_deps }}</th>
-                <th>{{ package.loc }}</th>
-                <th>{{ package.unsafe_loc }}</th>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="container">
+        <h1>Cargo-dephell</h1>
+        <p>This is a list of dependencies collected from {{ path }}.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>package name</th>
+                    <th>dev?</th>
+                    <th>dependencies imported</th>
+                    <th>internal packages depending on this dependency</th>
+                    <th>LOC</th>
+                    <th>unsafe LOC</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for package in packages %}
+                <tr>
+                    <th>{{ package.name }}</th>
+                    <th>{{ package.is_dev }}</th>
+                    <th>{{ package.total_third_deps }}</th>
+                    <th>{{ package.total_new_third_deps }}</th>
+                    <th>{{ package.loc }}</th>
+                    <th>{{ package.unsafe_loc }}</th>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </body>
+
 </html>
