@@ -179,7 +179,13 @@ fn main() {
                 if !file.file_type().unwrap().is_file() {
                     continue; // TODO: we ignore symlink here, do we want this?
                 }
-                let filepath = file.path().to_str().unwrap();
+                let filepath = match file.path().to_str() {
+                    Some(x) => x,
+                    None => {
+                        eprintln!("couldn't convert the path to string {:?}", file.path());
+                        return;
+                    }
+                };
                 if filepath.contains("test") {
                     continue; // TODO: this is a ghetto way of ignore tests
                 }
