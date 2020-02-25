@@ -1,20 +1,23 @@
 use askama::Template;
 use clap::{App, Arg};
-use guppy::graph::PackageGraph;
+use guppy::graph::{DependencyDirection, PackageGraph};
 use guppy::{MetadataCommand, PackageId};
+use regex::Regex;
 use std::fs::File;
 use std::io::prelude::*;
 
 #[derive(Template)]
 #[template(path = "list.html")]
 struct HtmlList<'a, 'b> {
-    packages: Vec<&'a PackageRisk<'b>>,
+    path: &'b str,
+    packages: Vec<&'a PackageRisk<'a>>,
 }
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 struct PackageRisk<'a> {
     name: &'a str,
     is_dev: bool,
+    repo: &'a str,
 
     // total number of transitive third party dependencies imported
     // by this dependency (not including this dependency)
@@ -28,6 +31,8 @@ struct PackageRisk<'a> {
     // number of lines of unsafe code for this dependency as
     // well as all the third party dependencies it imports
     unsafe_loc: u64,
+    // number of github stars, if any
+    stargazers_count: u64,
 }
 
 impl PackageRisk<'_> {
@@ -37,6 +42,12 @@ impl PackageRisk<'_> {
         risk_score += self.unsafe_loc * 5000;
         risk_score
     }
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct GithubResponse {
+    #[serde(rename = "stargazers_count")]
+    stargazers_count: u64,
 }
 
 fn main() {
@@ -86,6 +97,12 @@ fn main() {
     let root_deps = package_graph.workspace().member_ids();
     let root_deps: HashSet<&PackageId> = HashSet::from_iter(root_deps);
 
+    // create a client to query github (to get # of stars)
+    let github_client = reqwest::blocking::Client::builder()
+        .user_agent("mimoo/cargo-dephell")
+        .build()
+        .unwrap();
+
     // find all direct dependencies
     use std::collections::HashMap;
     let mut direct_deps: HashMap<&PackageId, PackageRisk> = HashMap::new();
@@ -94,16 +111,17 @@ fn main() {
         if root_deps.contains(package_id) {
             continue;
         }
-        // unwrap: if it's not a root deps, it is being imported
+        // who's importing it?
         let importers = package_graph.reverse_dep_links(package_id).unwrap();
         for dependency_link in importers {
-            // it is imported by a root dependency
+            // it is imported by a root dependency, add it
             if root_deps.contains(dependency_link.from.id()) {
-                // metadata
                 let mut package_risk = PackageRisk::default();
                 package_risk.name = dependency_link.edge.dep_name();
                 package_risk.is_dev = dependency_link.edge.dev_only();
-                // insert
+                if let Some(repo) = dependency_link.to.repository() {
+                    package_risk.repo = repo;
+                }
                 direct_deps.insert(package_id, package_risk);
                 break;
             }
@@ -112,6 +130,28 @@ fn main() {
 
     // rank every direct dependency
     for (direct_dep, package_risk) in direct_deps.iter_mut() {
+        // check how many root pkgs end up making use of this dependency
+        let root_importers = package_graph.select_reverse(vec![*direct_dep]).unwrap();
+        let root_importers = root_importers.into_iter_metadatas(Some(DependencyDirection::Reverse));
+        package_risk.total_new_third_deps = root_importers.len() as u64;
+
+        // check number of stars on github
+        let package_metadata = package_graph.metadata(direct_dep).unwrap();
+        if let Some(repo) = package_metadata.repository() {
+            let re = Regex::new(r"github\.com/([a-zA-Z0-9_-]*/[a-zA-Z0-9_-]*)").unwrap();
+            let caps = re.captures(repo).unwrap();
+            if let Some(repo) = caps.get(1) {
+                let request_url = format!("https://api.github.com/repos/{}", repo.as_str());
+                if let Ok(resp) = github_client.get(&request_url).send() {
+                    let resp: reqwest::Result<GithubResponse> = resp.json();
+                    match resp {
+                        Ok(resp) => package_risk.stargazers_count = resp.stargazers_count,
+                        Err(err) => eprintln!("{}", err),
+                    };
+                }
+            }
+        }
+
         // find out every transitive dependencies
         let mut to_analyze = HashSet::new();
         to_analyze.insert(*direct_dep);
@@ -128,8 +168,8 @@ fn main() {
 
         // analyze every dependency and store result in direct_dep
         for dep in to_analyze {
-            let package_metadata = package_graph.metadata(dep).unwrap();
             // get path to dependency
+            let package_metadata = package_graph.metadata(dep).unwrap();
             let package_path = package_metadata.manifest_path().parent().unwrap();
 
             // TODO: use WalkParallel?
@@ -188,6 +228,7 @@ fn main() {
         }
         Some(html_output) => {
             let html_page = HtmlList {
+                path: manifest_path,
                 packages: deps_by_risk_reverted,
             };
             let mut file = match File::create(html_output) {
