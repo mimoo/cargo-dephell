@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cargo-dephell</title>
+</head>
+<body>
+    <h1>Cargo-dephell</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>package name</th>
+                <th>dev?</th>
+                <th>dependencies imported</th>
+                <th>LOC</th>
+                <th>unsafe LOC</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for package in packages %}
+            <tr>
+                <th>{{ package.name }}</th>
+                <th>{{ package.is_dev }}</th>
+                <th>{{ package.total_third_deps }}</th>
+                <th>{{ package.total_new_third_deps }}</th>
+                <th>{{ package.loc }}</th>
+                <th>{{ package.unsafe_loc }}</th>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

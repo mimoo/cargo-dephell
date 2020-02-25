@@ -1,6 +1,15 @@
+use askama::Template;
 use clap::{App, Arg};
 use guppy::graph::PackageGraph;
 use guppy::{MetadataCommand, PackageId};
+use std::fs::File;
+use std::io::prelude::*;
+
+#[derive(Template)]
+#[template(path = "list.html")]
+struct HtmlList<'a, 'b> {
+    packages: Vec<&'a PackageRisk<'b>>,
+}
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 struct PackageRisk<'a> {
@@ -92,8 +101,6 @@ fn main() {
             if root_deps.contains(dependency_link.from.id()) {
                 // metadata
                 let mut package_risk = PackageRisk::default();
-                //            let package_metadata = package_graph.metadata(package_id).unwrap();
-                //            package_risk.package_name = package_metadata.name();
                 package_risk.name = dependency_link.edge.dep_name();
                 package_risk.is_dev = dependency_link.edge.dev_only();
                 // insert
@@ -169,17 +176,28 @@ fn main() {
         let risk = package_risk.risk_score();
         deps_by_risk.insert(risk, package_risk);
     }
+    let deps_by_risk_reverted: Vec<&PackageRisk> =
+        deps_by_risk.iter().rev().map(|item| *item.1).collect();
 
     match matches.value_of("html-output") {
         None => {
             // print result order by risk_score DESCENDING
-            let deps_by_risk_reverted: Vec<&PackageRisk> =
-                deps_by_risk.iter().rev().map(|item| *item.1).collect();
             let j = serde_json::to_string(&deps_by_risk_reverted).unwrap();
             println!("{}", j);
         }
         Some(html_output) => {
-            println!("html");
+            let html_page = HtmlList {
+                packages: deps_by_risk_reverted,
+            };
+            let mut file = match File::create(html_output) {
+                Ok(x) => x,
+                Err(err) => {
+                    eprintln!("{}", err);
+                    return;
+                }
+            };
+            let _ = write!(&mut file, "{}", html_page.render().unwrap()).unwrap();
+            println!("html output saved at {}", html_output);
         }
     };
 }
