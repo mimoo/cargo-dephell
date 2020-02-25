@@ -40,6 +40,10 @@
         tr:nth-child(even) {
             background-color: #f8f6ff;
         }
+
+        .hide {
+            display: none;
+        }
     </style>
 </head>
 
@@ -62,7 +66,7 @@
             </thead>
             <tbody>
                 {% for package in packages %}
-                <tr {% if package.is_dev %}class="dev"{% endif %}>
+                <tr {% if package.is_dev %}class="dev" {% endif %}>
                     <th><a href="{{package.repo}}">{{ package.name }}</a></th>
                     <th>{{ package.is_dev }}</th>
                     <th>{{ package.total_third_deps }}</th>
@@ -78,8 +82,8 @@
 
     <script>
         document.querySelector("#no_dev").addEventListener("click", () => {
-            document.querySelector(".dev")
-        })
+            document.querySelectorAll(".dev").forEach((elem) => elem.classList.toggle("hide"));
+        });
     </script>
 </body>
 
