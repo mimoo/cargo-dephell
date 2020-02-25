@@ -139,15 +139,17 @@ fn main() {
         let package_metadata = package_graph.metadata(direct_dep).unwrap();
         if let Some(repo) = package_metadata.repository() {
             let re = Regex::new(r"github\.com/([a-zA-Z0-9_-]*/[a-zA-Z0-9_-]*)").unwrap();
-            let caps = re.captures(repo).unwrap();
-            if let Some(repo) = caps.get(1) {
-                let request_url = format!("https://api.github.com/repos/{}", repo.as_str());
-                if let Ok(resp) = github_client.get(&request_url).send() {
-                    let resp: reqwest::Result<GithubResponse> = resp.json();
-                    match resp {
-                        Ok(resp) => package_risk.stargazers_count = resp.stargazers_count,
-                        Err(err) => eprintln!("{}", err),
-                    };
+            let caps = re.captures(repo);
+            if let Some(caps) = caps {
+                if let Some(repo) = caps.get(1) {
+                    let request_url = format!("https://api.github.com/repos/{}", repo.as_str());
+                    if let Ok(resp) = github_client.get(&request_url).send() {
+                        let resp: reqwest::Result<GithubResponse> = resp.json();
+                        match resp {
+                            Ok(resp) => package_risk.stargazers_count = resp.stargazers_count,
+                            Err(err) => eprintln!("{}", err),
+                        };
+                    }
                 }
             }
         }
