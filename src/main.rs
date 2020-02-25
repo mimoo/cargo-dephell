@@ -1,12 +1,6 @@
+use clap::{App, Arg};
 use guppy::graph::PackageGraph;
 use guppy::{MetadataCommand, PackageId};
-
-const USAGE: &str = "
-    Cargo dephell
-
-    Usage:
-        cargo dephell [--manifest-path PATH]
-";
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 struct PackageRisk<'a> {
@@ -36,39 +30,45 @@ impl PackageRisk<'_> {
     }
 }
 
-/*
-fn get_path(package_name: &str, package_version: &str) -> String {
-    use std::path::PathBuf;
-    // figure out path of crate source
-    let mut path = PathBuf::from(CRATES_PATH);
-    let mut folder_name = package_name.to_string();
-    folder_name.push_str("-");
-    folder_name.push_str(package_version);
-    path.push(folder_name);
-    // return as string
-    path.into_os_string().into_string().unwrap()
-}
-*/
-
 fn main() {
-    // get manifest path of project
+    // parse arguments
+    let matches = App::new("cargo-dephell")
+        .version("1.0")
+        .author("David W. <davidwg@fb.com>")
+        .about("Risk management for third-party dependencies")
+        .arg(
+            Arg::with_name("manifest-path")
+                .short("m")
+                .long("manifest-path")
+                .value_name("PATH")
+                .help("Sets the path to the Cargo.toml to analyze")
+                .takes_value(true)
+                .default_value("./Cargo.toml"),
+        )
+        .arg(
+            Arg::with_name("html-output")
+                .short("o")
+                .long("html-output")
+                .takes_value(true)
+                .help("prints the output as HTML (default JSON)"),
+        )
+        .get_matches();
+
+    let manifest_path = matches
+        .value_of("manifest-path")
+        .expect("must provide a manifest-path");
+
     let mut cmd = MetadataCommand::new();
-    let mut args = std::env::args().skip_while(|val| !val.starts_with("--manifest-path"));
-    match args.next() {
-        Some(ref p) if p == "--manifest-path" => {
-            cmd.manifest_path(args.next().unwrap());
-        }
-        Some(p) => {
-            cmd.manifest_path(p.trim_start_matches("--manifest-path="));
-        }
-        None => {
-            eprintln!("{}", USAGE);
+    cmd.manifest_path(manifest_path);
+
+    // construct graph from metadata command
+    let package_graph = match PackageGraph::from_command(&mut cmd) {
+        Ok(x) => x,
+        Err(err) => {
+            eprintln!("{}", err);
             return;
         }
     };
-
-    // construct graph from metadata command
-    let package_graph = PackageGraph::from_command(&mut cmd).expect("command should work");
 
     // get all internal dependencies
     // (either main package or members of the workspace)
@@ -170,9 +170,16 @@ fn main() {
         deps_by_risk.insert(risk, package_risk);
     }
 
-    // print result order by risk_score DESCENDING
-    let deps_by_risk_reverted: Vec<&PackageRisk> =
-        deps_by_risk.iter().rev().map(|item| *item.1).collect();
-    let j = serde_json::to_string(&deps_by_risk_reverted).unwrap();
-    println!("{}", j);
+    match matches.value_of("html-output") {
+        None => {
+            // print result order by risk_score DESCENDING
+            let deps_by_risk_reverted: Vec<&PackageRisk> =
+                deps_by_risk.iter().rev().map(|item| *item.1).collect();
+            let j = serde_json::to_string(&deps_by_risk_reverted).unwrap();
+            println!("{}", j);
+        }
+        Some(html_output) => {
+            println!("html");
+        }
+    };
 }
