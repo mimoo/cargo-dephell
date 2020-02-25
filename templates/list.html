@@ -35,7 +35,9 @@
             vertical-align: middle;
         }
 
-        th {}
+        th {
+            padding: 10px;
+        }
 
         tr:nth-child(even) {
             background-color: #f8f6ff;
@@ -44,6 +46,36 @@
         .hide {
             display: none;
         }
+
+        button {
+            text-decoration: none;
+            color: white;
+            padding: 10px 30px;
+            display: inline-block;
+            position: relative;
+            border: 1px solid rgba(0,0,0,0.21);
+            border-bottom: 4px solid rgba(0,0,0,0.21);
+            border-radius: 4px;
+            text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+
+            padding: 4px 12px;  
+            font-size: 12px;
+
+            background: rgba(130,200,160,1);
+            background: -moz-linear-gradient(top, rgba(130,200,160,1) 0%, rgba(130,199,158,1) 100%);
+            background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(130,200,160,1)), color-stop(100%, rgba(130,199,158,1)));
+            background: -webkit-linear-gradient(top, rgba(130,200,160,1) 0%, rgba(130,199,158,1) 100%);
+            background: -o-linear-gradient(top, rgba(130,200,160,1) 0%, rgba(130,199,158,1) 100%);
+            background: -ms-linear-gradient(top, rgba(130,200,160,1) 0%, rgba(130,199,158,1) 100%);
+            background: linear-gradient(to bottom, rgba(130,200,160,1) 0%, rgba(124, 185, 149, 1) 100%);
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#82c8a0', endColorstr='#82c79e', GradientType=0 );
+        }
+
+        button:active  {background: #72B08E;}
+
+        nav {
+            margin-bottom:10px;
+        }
     </style>
 </head>
 
@@ -51,7 +83,9 @@
     <div class="container">
         <h1>Cargo-dephell</h1>
         <p>This is a list of dependencies collected from {{ path }}.</p>
-        <button id="no_dev">toggle dev dependencies</button>
+        <nav>
+            <button id="no_dev">toggle dev dependencies</button>
+        </nav> 
         <table>
             <thead>
                 <tr>

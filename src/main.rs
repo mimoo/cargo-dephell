@@ -58,19 +58,27 @@ fn main() {
         .about("Risk management for third-party dependencies")
         .arg(
             Arg::with_name("manifest-path")
+                .help("Sets the path to the Cargo.toml to analyze")
                 .short("m")
                 .long("manifest-path")
-                .value_name("PATH")
-                .help("Sets the path to the Cargo.toml to analyze")
                 .takes_value(true)
+                .value_name("PATH")
                 .default_value("./Cargo.toml"),
         )
         .arg(
             Arg::with_name("html-output")
+                .help("prints the output as HTML (default JSON)")
                 .short("o")
                 .long("html-output")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("github-token")
+                .short("g")
+                .long("github-token")
                 .takes_value(true)
-                .help("prints the output as HTML (default JSON)"),
+                .value_name("USER:TOKEN")
+                .help("allows the CLI to retrieve github repos stats"),
         )
         .get_matches();
 
@@ -143,7 +151,21 @@ fn main() {
             if let Some(caps) = caps {
                 if let Some(repo) = caps.get(1) {
                     let request_url = format!("https://api.github.com/repos/{}", repo.as_str());
-                    if let Ok(resp) = github_client.get(&request_url).send() {
+
+                    let mut request = github_client.get(&request_url);
+
+                    if let Some(github_token) = matches.value_of("github-token") {
+                        let github_token: Vec<&str> = github_token.split(":").collect();
+                        if github_token.len() != 2 {
+                            eprintln!("wrong github-token, must be of the form username:token");
+                            return;
+                        }
+                        let username = github_token[0];
+                        let token = github_token[1];
+                        request = request.basic_auth(username, Some(token));
+                    }
+
+                    if let Ok(resp) = request.send() {
                         let resp: reqwest::Result<GithubResponse> = resp.json();
                         match resp {
                             Ok(resp) => package_risk.stargazers_count = resp.stargazers_count,
