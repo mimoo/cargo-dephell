@@ -28,6 +28,8 @@ struct PackageRisk<'a> {
     // number of lines-of-code for this dependency as well as
     // all the third party dependencies it imports
     loc: u64,
+    // number of rust lines-of-code
+    rust_loc: u64,
     // number of lines of unsafe code for this dependency as
     // well as all the third party dependencies it imports
     unsafe_loc: u64,
@@ -269,12 +271,15 @@ fn main() {
                     continue; // TODO: this is a ghetto way of ignore tests
                 }
 
-                // look for safe lines of code
+                // look for all lines of code (not just rust)
                 let lang = loc::lang_from_ext(filepath);
                 if lang != loc::Lang::Unrecognized {
                     let count = loc::count(filepath);
                     // update
                     package_risk.loc += u64::from(count.code);
+                    if lang == loc::Lang::Rust {
+                        package_risk.rust_loc += u64::from(count.code);
+                    }
                 }
 
                 // look for unsafe lines of code (not including tests)

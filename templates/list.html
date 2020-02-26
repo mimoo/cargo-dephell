@@ -94,7 +94,8 @@
                     <th>transitive dependencies imported</th>
                     <th>imported by # workspace crates</th>
                     <th>lines of code</th>
-                    <th>unsafe lines of code</th>
+                    <th>lines of rust code</th>
+                    <th>unsafe lines of rust code</th>
                     <th>github stars</th>
                 </tr>
             </thead>
@@ -106,6 +107,7 @@
                     <th>{{ package.total_third_deps }}</th>
                     <th>{{ package.total_new_third_deps }}</th>
                     <th>{{ package.loc }}</th>
+                    <th>{{ package.rust_loc }}</th>
                     <th>{{ package.unsafe_loc }}</th>
                     <th>{{ package.stargazers_count }}</th>
                 </tr>

@@ -11,15 +11,23 @@ The risk is calculated based on:
 * Number of workplace packages making use of the dependency
 * Number of github stars
 
-Other metrics we are considering:
-
-* Total number of new (transitive) dependencies added by a dependency. E.g. without dependency X, we could get rid of Y dependencies.
-* Is the code on the given github.com the same as the code uploaded on crates.io?
-* When was the last commit made? Or last version released?
-* Amount of C code imported
-
 ## Usage
 
 ```sh
 cargo run -- --manifest-path .../Cargo.toml
 ```
+
+## Things that would be nice to have
+
+Other metrics we are considering:
+
+* Total number of new (transitive) dependencies added by a dependency. E.g. without dependency X, we could get rid of Y dependencies.
+* Is the code on the given github.com the same as the code uploaded on crates.io?
+* When was the last commit made? Or last version released?
+* Amount of C code imported (or other languages)
+
+Other stuff:
+
+* click on a dependency, and get the same page
+* enable and disable features dynamically (currently every feature is grabbed)
+* display dependency graphs
