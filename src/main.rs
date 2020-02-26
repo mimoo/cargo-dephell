@@ -88,6 +88,14 @@ fn main() {
                 .value_name("PROTOCOL://IP:PORT")
                 .help("uses a proxy to make external requests to github"),
         )
+        .arg(
+            Arg::with_name("ignore-workspace")
+                .short("i")
+                .multiple(true)
+                .takes_value(true)
+                .value_name("CRATE_NAME")
+                .help("can be used multiple times to list workplace crates to ignore"),
+        )
         .get_matches();
 
     let manifest_path = matches
@@ -96,22 +104,6 @@ fn main() {
 
     let mut cmd = MetadataCommand::new();
     cmd.manifest_path(manifest_path);
-
-    // construct graph from metadata command
-    let package_graph = match PackageGraph::from_command(&mut cmd) {
-        Ok(x) => x,
-        Err(err) => {
-            eprintln!("{}", err);
-            return;
-        }
-    };
-
-    // get all internal dependencies
-    // (either main package or members of the workspace)
-    use std::collections::HashSet;
-    use std::iter::FromIterator;
-    let root_deps = package_graph.workspace().member_ids();
-    let root_deps: HashSet<&PackageId> = HashSet::from_iter(root_deps);
 
     // create a client to query github (to get # of stars)
     let mut github_client =
@@ -129,19 +121,48 @@ fn main() {
     }
     let github_client = github_client.build().unwrap();
 
+    // construct graph from metadata command
+    let package_graph = match PackageGraph::from_command(&mut cmd) {
+        Ok(x) => x,
+        Err(err) => {
+            eprintln!("{}", err);
+            return;
+        }
+    };
+
+    // get all internal dependencies
+    // (either main package or members of the workspace)
+    use std::collections::HashSet;
+    use std::iter::FromIterator;
+    let root_crates = package_graph.workspace().member_ids();
+    let mut root_crates: HashSet<&PackageId> = HashSet::from_iter(root_crates);
+
+    // remove workspace crates that we want to ignore
+    if let Some(to_ignore) = matches.values_of("ignore-workspace") {
+        root_crates = root_crates
+            .into_iter()
+            .filter(|pkg_id| {
+                let package_metadata = package_graph.metadata(pkg_id).unwrap();
+                let package_name = package_metadata.name();
+                let to_ignore: Vec<&str> = to_ignore.clone().collect();
+                !to_ignore.contains(&package_name)
+            })
+            .collect();
+    }
+
     // find all direct dependencies
     use std::collections::HashMap;
     let mut direct_deps: HashMap<&PackageId, PackageRisk> = HashMap::new();
     for package_id in package_graph.package_ids() {
         // ignore root dependencies
-        if root_deps.contains(package_id) {
+        if root_crates.contains(package_id) {
             continue;
         }
         // who's importing it?
         let importers = package_graph.reverse_dep_links(package_id).unwrap();
         for dependency_link in importers {
             // it is imported by a root dependency, add it
-            if root_deps.contains(dependency_link.from.id()) {
+            if root_crates.contains(dependency_link.from.id()) {
                 let mut package_risk = PackageRisk::default();
                 package_risk.name = dependency_link.edge.dep_name();
                 package_risk.is_dev = dependency_link.edge.dev_only();
@@ -164,7 +185,7 @@ fn main() {
         // check number of stars on github
         let package_metadata = package_graph.metadata(direct_dep).unwrap();
         if let Some(repo) = package_metadata.repository() {
-            let re = Regex::new(r"github\.com/([a-zA-Z0-9_-]*/[a-zA-Z0-9_-]*)").unwrap();
+            let re = Regex::new(r"github\.com/([a-zA-Z0-9._-]*/[a-zA-Z0-9._-]*)").unwrap();
             let caps = re.captures(repo);
             if let Some(caps) = caps {
                 if let Some(repo) = caps.get(1) {
@@ -184,11 +205,20 @@ fn main() {
                     }
 
                     if let Ok(resp) = request.send() {
-                        let resp: reqwest::Result<GithubResponse> = resp.json();
-                        match resp {
-                            Ok(resp) => package_risk.stargazers_count = resp.stargazers_count,
-                            Err(err) => eprintln!("{}", err),
-                        };
+                        if !resp.status().is_success() {
+                            eprintln!("github request failed");
+                            eprintln!("request to {}", request_url);
+                            eprintln!("status: {}", resp.status());
+                            eprintln!("text: {:?}", resp.text());
+                        } else {
+                            let resp_json: reqwest::Result<GithubResponse> = resp.json();
+                            match resp_json {
+                                Ok(x) => package_risk.stargazers_count = x.stargazers_count,
+                                Err(err) => {
+                                    eprintln!("{}", err);
+                                }
+                            };
+                        }
                     }
                 }
             }
@@ -199,7 +229,7 @@ fn main() {
         to_analyze.insert(*direct_dep);
         for possible_dep in package_graph.package_ids() {
             // ignore root dependencies
-            if root_deps.contains(possible_dep) {
+            if root_crates.contains(possible_dep) {
                 continue;
             }
             if package_graph.depends_on(*direct_dep, possible_dep).unwrap() {
