@@ -1,6 +1,6 @@
 use askama::Template;
 use clap::{App, Arg};
-use guppy::graph::{DependencyDirection, PackageGraph};
+use guppy::graph::{DependencyDirection, PackageGraph, PackageMetadata};
 use guppy::{MetadataCommand, PackageId};
 use regex::Regex;
 use std::fs::File;
@@ -181,6 +181,9 @@ fn main() {
         // check how many root pkgs end up making use of this dependency
         let root_importers = package_graph.select_reverse(vec![*direct_dep]).unwrap();
         let root_importers = root_importers.into_iter_metadatas(Some(DependencyDirection::Reverse));
+        let root_importers: Vec<&PackageMetadata> = root_importers
+            .filter(|pkg_metadata| root_crates_to_analyze.contains(pkg_metadata.id()))
+            .collect();
         package_risk.total_new_third_deps = root_importers.len() as u64;
 
         // check number of stars on github
