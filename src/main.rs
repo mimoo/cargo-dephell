@@ -189,7 +189,10 @@ fn main() {
             let caps = re.captures(repo);
             if let Some(caps) = caps {
                 if let Some(repo) = caps.get(1) {
-                    let request_url = format!("https://api.github.com/repos/{}", repo.as_str());
+                    let request_url = format!(
+                        "https://api.github.com/repos/{}",
+                        repo.as_str().trim_end_matches(".git")
+                    );
 
                     let mut request = github_client.get(&request_url);
 
