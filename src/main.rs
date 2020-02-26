@@ -135,11 +135,12 @@ fn main() {
     use std::collections::HashSet;
     use std::iter::FromIterator;
     let root_crates = package_graph.workspace().member_ids();
-    let mut root_crates: HashSet<&PackageId> = HashSet::from_iter(root_crates);
+    let root_crates: HashSet<&PackageId> = HashSet::from_iter(root_crates);
+    let mut root_crates_to_analyze: HashSet<&PackageId> = root_crates.clone();
 
     // remove workspace crates that we want to ignore
     if let Some(to_ignore) = matches.values_of("ignore-workspace") {
-        root_crates = root_crates
+        root_crates_to_analyze = root_crates_to_analyze
             .into_iter()
             .filter(|pkg_id| {
                 let package_metadata = package_graph.metadata(pkg_id).unwrap();
@@ -162,7 +163,7 @@ fn main() {
         let importers = package_graph.reverse_dep_links(package_id).unwrap();
         for dependency_link in importers {
             // it is imported by a root dependency, add it
-            if root_crates.contains(dependency_link.from.id()) {
+            if root_crates_to_analyze.contains(dependency_link.from.id()) {
                 let mut package_risk = PackageRisk::default();
                 package_risk.name = dependency_link.edge.dep_name();
                 package_risk.is_dev = dependency_link.edge.dev_only();
