@@ -80,6 +80,14 @@ fn main() {
                 .value_name("USER:TOKEN")
                 .help("allows the CLI to retrieve github repos stats"),
         )
+        .arg(
+            Arg::with_name("proxy")
+                .short("p")
+                .long("proxy")
+                .takes_value(true)
+                .value_name("PROTOCOL://IP:PORT")
+                .help("uses a proxy to make external requests to github"),
+        )
         .get_matches();
 
     let manifest_path = matches
@@ -106,10 +114,20 @@ fn main() {
     let root_deps: HashSet<&PackageId> = HashSet::from_iter(root_deps);
 
     // create a client to query github (to get # of stars)
-    let github_client = reqwest::blocking::Client::builder()
-        .user_agent("mimoo/cargo-dephell")
-        .build()
-        .unwrap();
+    let mut github_client =
+        reqwest::blocking::ClientBuilder::new().user_agent("mimoo/cargo-dephell");
+    // (potentially use a proxy)
+    if let Some(proxy) = matches.value_of("proxy") {
+        let reqwest_proxy = match reqwest::Proxy::all(proxy) {
+            Ok(x) => x,
+            Err(err) => {
+                eprintln!("{}", err);
+                return;
+            }
+        };
+        github_client = github_client.proxy(reqwest_proxy);
+    }
+    let github_client = github_client.build().unwrap();
 
     // find all direct dependencies
     use std::collections::HashMap;
