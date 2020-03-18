@@ -1,6 +1,7 @@
 # Cargo-dephell
 
 This is work-in-progress.
+It's heavily biased towards the libra codebase (where we have a workspace, we don't have internal crates that are not listed in the workspace, we don't care about the rust edition of dependencies too much, etc.)
 
 The tool currently analyzes your crate, and prints out its list of direct dependencies sorted by risk.
 The risk is calculated based on:
@@ -16,6 +17,14 @@ The risk is calculated based on:
 ```sh
 cargo run -- --manifest-path .../Cargo.toml
 ```
+
+## Limitations
+
+* Nothing is really accurate
+* LOC is not accurate in general (features, tests, etc.)
+* all features of a dependency are imported
+* even if we import only the right features, results are going to be not-so-accurate because different dependencies can import the same dependency but with different feature
+* if several versions of a dependency are imported, the results are obtained via the first dependency the program encounters (this is because the repository could change, the LOC, etc.)
 
 ## Things that would be nice to have
 

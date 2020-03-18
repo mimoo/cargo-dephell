@@ -101,12 +101,17 @@
             </thead>
             <tbody>
                 {% for package in packages %}
-                <tr {% if package.is_dev %}class="dev" {% endif %}>
-                    <th><a href="{{package.repo}}">{{ package.name }}</a></th>
-                    <th>{{ package.is_dev }}</th>
+                <tr>
+                    <th>
+                        {% if package.repo.is_some() -%}
+                            <a href="{{ package.repo.as_deref().unwrap() }}">{{ package.name }}</a>
+                        {%- else -%}
+                            {{ package.name }}
+                        {%- endif %}
+                    </th>
                     <th>{{ package.total_third_deps }}</th>
                     <th>{{ package.total_new_third_deps }}</th>
-                    <th>{{ package.loc }}</th>
+                    <th>{{ package.non_rust_loc }}</th>
                     <th>{{ package.rust_loc }}</th>
                     <th>{{ package.unsafe_loc }}</th>
                     <th>{{ package.stargazers_count }}</th>
