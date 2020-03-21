@@ -18,48 +18,52 @@ pub struct PackageRisk {
   // metadata
   // --------
 
-  pub name: String,              // name of the dependency
-  pub versions: HashSet<String>, // potentially different versions are pulled (bad)
-  pub repo: Option<String>,        // link to its repository
+  /// name of the dependency
+  pub name: String,              
+  /// potentially different versions are pulled (bad)
+  pub versions: HashSet<String>, 
+  /// link to its repository
+  pub repo: Option<String>,      
 
   // useful for analysis
   // -------------------
 
+  /// path to the actual source code on disk
   #[serde(skip)]
-  pub manifest_path: PathBuf,     // path to the actual source code on disk
+  pub manifest_path: PathBuf,     
 
   // analysis result
   // ---------------
 
-  // transitive dependencies (in reversed direction)
+  /// transitive dependencies (in reversed direction)
   pub transitive_dependencies: HashSet<PackageId>,
 
-  // total number of transitive third party dependencies imported
-  // by this dependency (not including this dependency)
+  /// total number of transitive third party dependencies imported
+  /// by this dependency (not including this dependency)
   pub total_third_deps: u64,
 
-  // number of root crates that import this package
+  /// number of root crates that import this package
   pub root_importers: Vec<PackageId>,
 
-  // total number of transitive third party dependencies imported
-  // by this dependency, and only by this dependency
   // TODO: implement this
+  /// total number of transitive third party dependencies imported
+  /// by this dependency, and only by this dependency
   pub exclusive_deps_introduced: u64,
 
-  // number of non-rust lines-of-code
+  /// number of non-rust lines-of-code
   pub non_rust_loc: u64,
 
-  // number of rust lines-of-code
+  /// number of rust lines-of-code
   pub rust_loc: u64,
 
-  // number of lines of unsafe code
+  /// number of lines of unsafe code
   pub unsafe_loc: u64,
 
-  // number of github stars, if any
+  /// number of github stars, if any
   pub stargazers_count: u64,
 
   // TODO: no need for these, we can do that in js
-  // number of non-rust lines-of-code, including transitive dependencies
+  /// number of non-rust lines-of-code, including transitive dependencies
   pub total_non_rust_loc: u64,
 
   // number of rust lines-of-code, including transitive dependencies

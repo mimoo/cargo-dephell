@@ -5,9 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>cargo-dephell</title>
-    <!-- fontawesome -->
+    <!-- icon with fontawesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/js/all.min.js"></script>
+    <!-- tooltip with tippy -->
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/shift-away.css">
     <!-- custom -->
     <style>
         @import url('https://fonts.googleapis.com/css?family=Roboto:100,400,700&display=swap');
@@ -15,6 +17,20 @@
         * {
             font-family: Roboto;
             box-sizing: border-box;
+        }
+
+        body {
+            margin:0;
+        }
+
+        header {
+            background-color:#be4141;
+        }
+
+        header h1 {
+            color: antiquewhite;
+            margin:0;
+            padding:20px 0 20px;
         }
 
         .container {
@@ -42,8 +58,20 @@
             padding: 10px;
         }
 
+        th a {
+            color: white;
+        }
+
         tr:nth-child(even) {
             background-color: #f8f6ff;
+        }
+
+        td a {
+            color:black;
+        }
+
+        td:first-child {
+            text-align:center;
         }
 
         .hide {
@@ -83,8 +111,12 @@
 </head>
 
 <body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-fire"></i> Cargo-dephell</h1>
+        </div>
+    </header>
     <div class="container">
-        <h1><i class="fas fa-fire"></i> Cargo-dephell</h1>
         <p>This is a list of dependencies collected from {{ path }}.</p>
         <nav>
             
@@ -92,15 +124,52 @@
         <table>
             <thead>
                 <tr>
-                    <th>dependency <i class="fas fa-question-circle"></i></th>
-                    <th>transitive dependencies <i class="fas fa-question-circle"></i></th>
-                    <th>versions imported <i class="fas fa-question-circle"></i></th>
-                    <th>imported by <i class="fas fa-question-circle"></i></th>
-                    <th>introduced by <i class="fas fa-question-circle"></i></th>
-                    <th>lines of non-rust code <i class="fas fa-question-circle"></i></th>
-                    <th>lines of rust code <i class="fas fa-question-circle"></i></th>
-                    <th>unsafe lines of rust code <i class="fas fa-question-circle"></i></th>
-                    <th>github stars <i class="fas fa-question-circle"></i></th>
+                    <th>
+                        <span data-tippy-content="the name of the dependency">
+                            dependency 
+                        </span>
+                        <a href="name" class="sort">sort</a>
+                    </th>
+                    <th>
+                        <span data-tippy-content="the number of dependencies that this dependency end up adding (if all features are set)">
+                            transitive dependencies
+                        </span>
+                    </th>
+                    <th>
+                        <span data-tippy-content="the number of different versions of this dependency that are imported in the workspace">
+                            versions imported
+                        </span>
+                    </th>
+                    <th>
+                        <span data-tippy-content="the number of workspace crates that have this dependency as transitive dependency">
+                            imported by
+                        </span>
+                    </th>
+                    <th>
+                        <span data-tippy-content="the number of dependencies that are introduced only by having this dependency">
+                            exclusive dependencies introduced
+                        </span>
+                    </th>
+                    <th>
+                        <span data-tippy-content="total lines of code for C, C++, etc. that might end up being imported by having this dependency (this includes transitive dependencies)">
+                            lines of non-rust code
+                        </span>
+                    </th>
+                    <th>
+                        <span data-tippy-content="total lines of rust code for this dependency and its transitive dependencies">
+                            lines of rust code
+                        </span>
+                    </th>
+                    <th>
+                        <span data-tippy-content="total lines of unsafe rust code for this dependency and its transitive dependencies">
+                            unsafe lines
+                        </span>
+                    </th>
+                    <th>
+                        <span data-tippy-content="number of github stars (only if the dependency has a github repository)">
+                            github stars
+                        </span>
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -110,6 +179,10 @@
         
     </div>
 
+    <!-- tooltip with tippy -->
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <!-- custom -->
     <script>
         // TODO: https://github.com/magjac/d3-graphviz
         // TODO: compute total_LOC here
@@ -126,11 +199,19 @@
             document.querySelector("tbody").innerHTML = "";
         }
 
+        function display_packages(package_ids) {
+            // update state
+            current_packages = package_ids;
+            // display
+            for(package_id of package_ids) {
+                display_package(package_id);
+            }
+        }
+
         function display_package(package_id) {
             let package = analysis_result[package_id];
-            console.log(package_id);
             let html = "<tr>";
-            html += '<td><a href="'+package_id+'" class="dep_name">' + package["name"] + "</a></td>";
+            html += '<td><a href="'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
             html += "<td>" + package["transitive_dependencies"].length + "</td>";
             html += "<td>" + package["versions"].length + "</td>";
             html += "<td>" + package["root_importers"].length + "</td>";
@@ -167,12 +248,13 @@
 
         // display main dependencies
         let nav = "workspace";
+        let current_packages = main_dependencies;
         for (main_dependency of main_dependencies) {
             display_package(main_dependency);
         }
 
         //
-        // events
+        // interaction
         // ------
 
         // clicking on a dependency gives us a view of a specific dependency
@@ -180,18 +262,41 @@
             if (event.target && event.target.className != "dep_name") {
                 return;
             }
-            package_name = event.target.innerHTML;
-            package_id = event.target.getAttribute("href");
+            // get info
+            let package_name = event.target.innerHTML;
+            let package_id = event.target.getAttribute("href");
+            // refresh
             nav_click(package_name);
             clean_table();
-            for (transitive_dependency of analysis_result[package_id]["transitive_dependencies"]) {
-                display_package(transitive_dependency);
-            }
+            display_packages(analysis_result[package_id]["transitive_dependencies"]);
             //
             event.preventDefault();
         });
 
+        // sorting columns
+        document.querySelector("thead").addEventListener("click", (event) => {
+            if (event.target && event.target.className != "sort") {
+                return;
+            }
+            // get info
+            let to_sort = event.target.getAttribute("href");
+            // sort
+            current_packages.sort((a, b) => (a[to_sort] > b[to_sort]) ? 1 : -1);
+            // refresh           
+            clean_table();
+            display_packages(current_packages);
+            //
+            event.preventDefault();
+        });
 
+        //
+        // tooltip for help
+        // ----------------
+
+        tippy('[data-tippy-content]', {
+            placement: 'bottom',
+            animation: 'shift-away'
+        });
 
     </script>
 </body>
