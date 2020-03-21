@@ -128,47 +128,55 @@
                         <span data-tippy-content="the name of the dependency">
                             dependency 
                         </span>
-                        <a href="name" class="sort">sort</a>
+                        <a href="#name" class="sort"><i class="fas fa-sort"></i></a>
                     </th>
                     <th>
                         <span data-tippy-content="the number of dependencies that this dependency end up adding (if all features are set)">
                             transitive dependencies
                         </span>
+                        <a href="#transitive_dependencies" class="sort"><i class="fas fa-sort"></i></a>
                     </th>
                     <th>
                         <span data-tippy-content="the number of different versions of this dependency that are imported in the workspace">
                             versions imported
                         </span>
+                        <a href="#versions" class="sort"><i class="fas fa-sort"></i></a>
                     </th>
                     <th>
                         <span data-tippy-content="the number of workspace crates that have this dependency as transitive dependency">
                             imported by
                         </span>
+                        <a href="#root_importers" class="sort"><i class="fas fa-sort"></i></a>
                     </th>
                     <th>
                         <span data-tippy-content="the number of dependencies that are introduced only by having this dependency">
                             exclusive dependencies introduced
                         </span>
+                        <a href="#exclusive_deps_introduced" class="sort"><i class="fas fa-sort"></i></a>
                     </th>
                     <th>
                         <span data-tippy-content="total lines of code for C, C++, etc. that might end up being imported by having this dependency (this includes transitive dependencies)">
                             lines of non-rust code
                         </span>
+                        <a href="#non_rust_loc" class="sort"><i class="fas fa-sort"></i></a>
                     </th>
                     <th>
                         <span data-tippy-content="total lines of rust code for this dependency and its transitive dependencies">
                             lines of rust code
                         </span>
+                        <a href="#rust_loc" class="sort"><i class="fas fa-sort"></i></a>
                     </th>
                     <th>
                         <span data-tippy-content="total lines of unsafe rust code for this dependency and its transitive dependencies">
                             unsafe lines
                         </span>
+                        <a href="#unsafe_loc" class="sort"><i class="fas fa-sort"></i></a>
                     </th>
                     <th>
                         <span data-tippy-content="number of github stars (only if the dependency has a github repository)">
                             github stars
                         </span>
+                        <a href="#stargazers_count" class="sort"><i class="fas fa-sort"></i></a>
                     </th>
                 </tr>
             </thead>
@@ -273,21 +281,46 @@
             event.preventDefault();
         });
 
-        // sorting columns
-        document.querySelector("thead").addEventListener("click", (event) => {
-            if (event.target && event.target.className != "sort") {
-                return;
+        const sort_buttons = document.querySelectorAll(".sort");
+        for (const sort_button of sort_buttons) {
+            sort_button.addEventListener("click", (event) => sort_click(event));
+        }
+
+        function reset_sort_icons() {
+            const sort_buttons = document.querySelectorAll("th svg");
+            for (sort_button of sort_buttons) {
+                sort_button.classList.remove("fa-sort-up", "fa-sort-down");
+                sort_button.classList.add("fa-sort");
             }
+        }
+        
+        function sort_click(event) {
+            console.log(event);
             // get info
-            let to_sort = event.target.getAttribute("href");
-            // sort
-            current_packages.sort((a, b) => (a[to_sort] > b[to_sort]) ? 1 : -1);
-            // refresh           
+            let to_sort = event.currentTarget.getAttribute("href").slice(1); // get rid of "#..."
+            let icon_clicked = event.currentTarget.querySelector("svg");
+            // figure out how to sort
+            let sort_asc = true;
+            if (icon_clicked.classList.contains("fa-sort-up")) {
+                sort_asc = false;
+            }
+            // reset sort icons
+            reset_sort_icons();
+            // sort and update sort icon
+            icon_clicked.classList.remove("fa-sort");
+            if (sort_asc) {
+                icon_clicked.classList.add("fa-sort-up");
+                current_packages.sort((a, b) => (analysis_result[a][to_sort] > analysis_result[b][to_sort]) ? 1 : -1);
+            } else {
+                icon_clicked.classList.add("fa-sort-down");
+                current_packages.sort((a, b) => (analysis_result[a][to_sort] < analysis_result[b][to_sort]) ? 1 : -1);
+            }
+            // refresh table
             clean_table();
             display_packages(current_packages);
             //
             event.preventDefault();
-        });
+        }
 
         //
         // tooltip for help
