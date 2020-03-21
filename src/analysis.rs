@@ -42,8 +42,9 @@ pub struct PackageRisk {
   pub root_importers: Vec<PackageId>,
 
   // total number of transitive third party dependencies imported
-  // by this dependency, and only this dependency
-  pub total_new_third_deps: u64,
+  // by this dependency, and only by this dependency
+  // TODO: implement this
+  pub exclusive_deps_introduced: u64,
 
   // number of non-rust lines-of-code
   pub non_rust_loc: u64,
@@ -57,6 +58,7 @@ pub struct PackageRisk {
   // number of github stars, if any
   pub stargazers_count: u64,
 
+  // TODO: no need for these, we can do that in js
   // number of non-rust lines-of-code, including transitive dependencies
   pub total_non_rust_loc: u64,
 
@@ -168,6 +170,7 @@ fn get_total_loc(analysis_result: &mut HashMap<PackageId, PackageRisk>, package_
       for transitive_dependency in transitive_dependencies {
         let package_risk = analysis_result.get(&transitive_dependency).unwrap();
         if package_risk.total_rust_loc == 0 {
+          // TODO: this is unfortunately not true :(
           unreachable!(); // because the dependencies are given in reverse order
         }
         total_non_rust_loc += package_risk.total_non_rust_loc;
@@ -189,6 +192,11 @@ fn get_total_loc(analysis_result: &mut HashMap<PackageId, PackageRisk>, package_
   //
   (total_non_rust_loc, total_rust_loc, total_unsafe_loc)
 }
+
+//
+// Helper
+// ------
+//
 
 fn create_or_update_dependency(analysis_result: &mut HashMap<PackageId, PackageRisk>, dep_link: &DependencyLink) {
   match analysis_result.entry(dep_link.to.id().to_owned()) {
@@ -270,6 +278,7 @@ pub fn analyze_repo(
 
   let mut analysis_result: HashMap<PackageId, PackageRisk> = HashMap::new();
 
+  // TODO: combine the two loops and inline `create_or_update...`
   // find all direct dependencies
   let mut main_dependencies: HashSet<PackageId> = HashSet::new();
   for root_crate in &root_crates_to_analyze {
@@ -320,6 +329,8 @@ pub fn analyze_repo(
       .map(|package_id| package_id.to.id().to_owned())
       .collect();
 
+    // TODO: might not need this field, since we have len(transitive_dependencies)
+    // TODO: also, aren't we doing the same thing above here?
     // .total_third_deps
     let mut transitive_deps = HashSet::new();
     for possible_dep in package_graph.package_ids() {

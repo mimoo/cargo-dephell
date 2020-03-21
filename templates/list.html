@@ -5,7 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>cargo-dephell</title>
-
+    <!-- fontawesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/js/all.min.js"></script>
+    <!-- custom -->
     <style>
         @import url('https://fonts.googleapis.com/css?family=Roboto:100,400,700&display=swap');
 
@@ -81,36 +84,115 @@
 
 <body>
     <div class="container">
-        <h1>Cargo-dephell</h1>
+        <h1><i class="fas fa-fire"></i> Cargo-dephell</h1>
         <p>This is a list of dependencies collected from {{ path }}.</p>
         <nav>
-            <button id="no_dev">toggle dev dependencies</button>
-        </nav> 
+            
+        </nav>
         <table>
             <thead>
                 <tr>
-                    <th>dependency name</th>
-                    <th>dev dependency?</th>
-                    <th>transitive dependencies imported</th>
-                    <th>imported by # workspace crates</th>
-                    <th>lines of code</th>
-                    <th>lines of rust code</th>
-                    <th>unsafe lines of rust code</th>
-                    <th>github stars</th>
+                    <th>dependency <i class="fas fa-question-circle"></i></th>
+                    <th>transitive dependencies <i class="fas fa-question-circle"></i></th>
+                    <th>versions imported <i class="fas fa-question-circle"></i></th>
+                    <th>imported by <i class="fas fa-question-circle"></i></th>
+                    <th>introduced by <i class="fas fa-question-circle"></i></th>
+                    <th>lines of non-rust code <i class="fas fa-question-circle"></i></th>
+                    <th>lines of rust code <i class="fas fa-question-circle"></i></th>
+                    <th>unsafe lines of rust code <i class="fas fa-question-circle"></i></th>
+                    <th>github stars <i class="fas fa-question-circle"></i></th>
                 </tr>
             </thead>
             <tbody>
                 
             </tbody>
         </table>
+        
     </div>
 
     <script>
-        document.querySelector("#no_dev").addEventListener("click", () => {
-            document.querySelectorAll(".dev").forEach((elem) => elem.classList.toggle("hide"));
+        // TODO: https://github.com/magjac/d3-graphviz
+        // TODO: compute total_LOC here
+        // TODO: sort column
+        // TODO: clickable dependencies
+        // TODO: home button
+        // TODO: logo
+
+        //
+        // function to modify the table
+        //
+
+        function clean_table() {
+            document.querySelector("tbody").innerHTML = "";
+        }
+
+        function display_package(package_id) {
+            let package = analysis_result[package_id];
+            console.log(package_id);
+            let html = "<tr>";
+            html += '<td><a href="'+package_id+'" class="dep_name">' + package["name"] + "</a></td>";
+            html += "<td>" + package["transitive_dependencies"].length + "</td>";
+            html += "<td>" + package["versions"].length + "</td>";
+            html += "<td>" + package["root_importers"].length + "</td>";
+            html += "<td>" + package["exclusive_deps_introduced"].length + "</td>";
+            html += "<td>" + package["non_rust_loc"] + "</td>";
+            html += "<td>" + package["rust_loc"] + "</td>";
+            html += "<td>" + package["unsafe_loc"] + "</td>";
+            if (package["repo"] != null) {
+                html += '<td><a href="'+package["repo"]+'">' + package["stargazers_count"] + "</a></td>";
+            } else {
+                html += "<td>" + package["stargazers_count"] + "</td>";
+            }
+            html += "</tr>"
+            document.querySelector("tbody").innerHTML += html;
+        }
+
+        //
+        // nav functions
+        // -------------
+        //
+
+        function nav_click(dep_name) {
+            // TODO: add links for quick access
+            nav += " > " + dep_name;
+            document.querySelector("nav").innerHTML = nav;
+        }
+
+        //
+        // init
+        // ----
+
+        // obtain result and parse JSON
+        let {main_dependencies, analysis_result} = JSON.parse('{{ json_result }}');
+
+        // display main dependencies
+        let nav = "workspace";
+        for (main_dependency of main_dependencies) {
+            display_package(main_dependency);
+        }
+
+        //
+        // events
+        // ------
+
+        // clicking on a dependency gives us a view of a specific dependency
+        document.querySelector("tbody").addEventListener("click", (event) => {
+            if (event.target && event.target.className != "dep_name") {
+                return;
+            }
+            package_name = event.target.innerHTML;
+            package_id = event.target.getAttribute("href");
+            nav_click(package_name);
+            clean_table();
+            for (transitive_dependency of analysis_result[package_id]["transitive_dependencies"]) {
+                display_package(transitive_dependency);
+            }
+            //
+            event.preventDefault();
         });
 
-        var json_result = {{ json_result }};
+
+
     </script>
 </body>
 

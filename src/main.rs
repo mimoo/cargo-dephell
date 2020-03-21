@@ -16,7 +16,7 @@ mod analysis;
 //
 
 #[derive(Template)]
-#[template(path = "list.html")]
+#[template(path = "list.html", escape="none")]
 struct HtmlList {
     path: String,
     json_result: String,
@@ -139,18 +139,6 @@ fn main() {
         }
         Ok(x) => x,
     };
-
-    // sort result (via Btrees)
-    /*
-    use std::collections::btree_map::BTreeMap;
-    let mut deps_by_risk: BTreeMap<u64, &PackageRisk> = BTreeMap::new();
-    for (_, package_risk) in direct_deps.iter() {
-        let risk = package_risk.risk_score();
-        deps_by_risk.insert(risk, package_risk);
-    }
-    let deps_by_risk_reverted: Vec<&PackageRisk> =
-    deps_by_risk.iter().rev().map(|item| *item.1).collect();
-    */
 
     // convert result to JSON
     let json_result = JsonResult {
