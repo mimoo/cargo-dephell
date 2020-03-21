@@ -22,6 +22,7 @@ cargo run -- --manifest-path .../Cargo.toml
 
 * Nothing is really accurate
 * LOC is not accurate in general (features, tests, etc.)
+  - we ignore filepath that have the word "test" in it...
 * all features of a dependency are imported
 * even if we import only the right features, results are going to be not-so-accurate because different dependencies can import the same dependency but with different feature
 * if several versions of a dependency are imported, the results are obtained via the first dependency the program encounters (this is because the repository could change, the LOC, etc.)

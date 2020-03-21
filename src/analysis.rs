@@ -80,14 +80,6 @@ impl PackageRisk {
 }
 */
 
-/// AnalysisResult contains the result of all the analyzed packages.
-/// (It can potentially be used by the served webpage, so it uses Arc and RwLock.)
-#[derive(Serialize, Deserialize, Default)]
-pub struct AnalysisResult {
-    main_dependencies: HashSet<PackageId>,
-    packages_risk: HashMap<PackageId, PackageRisk>,
-}
-
 //
 // Analysis Functions
 // ==================
@@ -318,7 +310,7 @@ pub fn analyze_repo(
   // ------------------
   //
 
-  for (package_id, package_risk) in analysis_result.iter_mut() {
+  for (package_id, mut package_risk) in analysis_result.iter_mut() {
 
     // .transitive_dependencies
     package_risk.transitive_dependencies = package_graph
@@ -347,9 +339,9 @@ pub fn analyze_repo(
 
     // .total_new_third_deps
 
-    // .loc
-
+    // .non_rust_loc
     // .rust_loc
+    loc_and_everything(&mut package_risk);
 
     // .unsafe_loc
 
@@ -388,9 +380,10 @@ pub fn analyze_repo(
   Ok((main_dependencies, analysis_result))
 }
 
-/*
-fn loc_and_everyhing() {
+
+fn loc_and_everything(package_risk: &mut PackageRisk) {
   // TODO: use WalkParallel?
+  let package_path = package_risk.manifest_path.parent().unwrap();
   let walker = ignore::WalkBuilder::new(package_path).build();
   for result in walker {
     let file = result.unwrap();
@@ -413,7 +406,7 @@ fn loc_and_everyhing() {
     if lang != loc::Lang::Unrecognized {
       let count = loc::count(filepath);
       // update
-      package_risk.loc += u64::from(count.code);
+      package_risk.non_rust_loc += u64::from(count.code);
       if lang == loc::Lang::Rust {
         package_risk.rust_loc += u64::from(count.code);
       }
@@ -435,4 +428,3 @@ fn loc_and_everyhing() {
     }
   }
 }
-*/

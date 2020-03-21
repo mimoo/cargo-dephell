@@ -1,12 +1,14 @@
 // needed for rocket
 #![feature(proc_macro_hygiene, decl_macro)] // Nightly-only language features needed by Rocket
 
+use std::collections::{hash_map::HashMap, hash_set::HashSet};
+
 use askama::Template;
 use clap::{App, Arg};
+use serde::{Serialize, Deserialize};
+use guppy::PackageId;
 
 mod analysis;
-
-use analysis::{AnalysisResult, PackageRisk};
 
 //
 // HTML Stuff
@@ -15,9 +17,9 @@ use analysis::{AnalysisResult, PackageRisk};
 
 #[derive(Template)]
 #[template(path = "list.html")]
-struct HtmlList<'a, 'b> {
-    path: &'b str,
-    packages: Vec<&'a PackageRisk>,
+struct HtmlList {
+    path: String,
+    json_result: String,
 }
 
 //
@@ -28,30 +30,7 @@ struct HtmlList<'a, 'b> {
 #[derive(Serialize, Deserialize)]
 struct JsonResult {
     main_dependencies: HashSet<PackageId>,
-    analysis_result: HashMap<PackageId, PackageRisk>,
-}
-
-//
-// WebApp Stuff
-// ==========
-//
-
-mod routes {
-    use super::AnalysisResult;
-    use rocket::{get, State};
-    use std::sync::{Arc, RwLock};
-
-    #[get("/analysis_result")]
-    pub fn analysis_result(analysis_result: State<Arc<RwLock<AnalysisResult>>>) -> String {
-        let analysis_result = analysis_result.read().unwrap();
-        serde_json::to_string(&(*analysis_result)).unwrap()    
-    }
-
-    #[get("/")]
-    pub fn index() -> &'static str {
-        "Hello, world!"
-    }
-
+    analysis_result: HashMap<PackageId, analysis::PackageRisk>,
 }
 
 //
@@ -152,7 +131,14 @@ fn main() {
     let to_ignore: Option<Vec<&str>> = to_ignore.map(|x| x.collect());
     
     // do the analysis
-    let (main_dependencies, analysis_result) = analysis::analyze_repo(manifest_path, http_client, github_token, to_ignore);
+    let result = analysis::analyze_repo(manifest_path, http_client, github_token, to_ignore);
+    let (main_dependencies, analysis_result) = match result {
+        Err(err) => {
+            eprintln!("{}", err);
+            return;
+        }
+        Ok(x) => x,
+    };
 
     // sort result (via Btrees)
     /*
@@ -182,7 +168,7 @@ fn main() {
         }
         Some(html_output) => {
             let html_page = HtmlList {
-                path: manifest_path,
+                path: manifest_path.to_owned(),
                 json_result: json_result,
             };
             let mut file = match File::create(html_output) {
