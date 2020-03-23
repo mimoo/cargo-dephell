@@ -18,7 +18,7 @@ mod analysis;
 #[derive(Template)]
 #[template(path = "list.html", escape="none")]
 struct HtmlList {
-    path: String,
+    name: String,
     json_result: String,
 }
 
@@ -155,8 +155,9 @@ fn main() {
             println!("{}", json_result);
         }
         Some(html_output) => {
+            let name = std::path::Path::new(manifest_path).parent().unwrap().file_name().unwrap().to_str().unwrap().to_owned();
             let html_page = HtmlList {
-                path: manifest_path.to_owned(),
+                name: name,
                 json_result: json_result,
             };
             let mut file = match File::create(html_output) {

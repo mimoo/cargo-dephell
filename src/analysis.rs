@@ -135,7 +135,7 @@ impl GithubResponse {
 }
 
 fn get_root_importers(package_graph: &PackageGraph, root_crates: &HashSet<&PackageId>, dependency: &PackageId) -> Vec<PackageId> {
-  let root_importers = package_graph.select_reverse(vec![dependency]).unwrap();
+  let root_importers = package_graph.select_reverse(std::iter::once(dependency)).unwrap();
   let root_importers = root_importers.into_iter_metadatas(Some(DependencyDirection::Reverse));
   let root_importers: Vec<&PackageMetadata> = root_importers
     .filter(|pkg_metadata| root_crates.contains(&pkg_metadata.id())) // a root crate is an importer
@@ -154,7 +154,7 @@ fn get_exclusive_deps(package_graph: &PackageGraph, root_crates: &HashSet<&Packa
     !(dep_link.to.id() == dependency)
   });
   // obtain all dependencies from the root_crates
-  let new_all = package_graph.select_forward(root_crates.clone()).unwrap();
+  let new_all = package_graph.select_forward(root_crates.iter().copied()).unwrap();
   let new_all: Vec<_> = new_all.into_iter_ids(Some(DependencyDirection::Forward)).collect();
   // check if the original transitive dependencies are in there
   let mut exclusive_deps = Vec::new();
@@ -170,6 +170,42 @@ fn get_exclusive_deps(package_graph: &PackageGraph, root_crates: &HashSet<&Packa
   }
   exclusive_deps
 }
+
+
+fn get_loc(package_risk: &mut PackageRisk) {
+  let package_path = package_risk.manifest_path.parent().unwrap();
+  // TODO: use WalkParallel
+  let walker = ignore::WalkBuilder::new(package_path).build();
+  for result in walker {
+    let file = result.unwrap();
+    if !file.file_type().unwrap().is_file() {
+      continue; // TODO: we ignore symlink here, do we want this?
+    }
+    let filepath = match file.path().to_str() {
+      Some(x) => x,
+      None => {
+        eprintln!("couldn't convert the path to string {:?}", file.path());
+        return;
+      }
+    };
+
+    // look for all lines of code (not just rust)
+    let lang = loc::lang_from_ext(filepath);
+    if lang != loc::Lang::Unrecognized {
+      let count = loc::count(filepath);
+      // update LOC
+      package_risk.non_rust_loc += u64::from(count.code);
+      if lang == loc::Lang::Rust {
+        package_risk.rust_loc += u64::from(count.code);
+      }
+    }
+  }
+}
+
+fn analyze_unsafe(package_risk: &mut PackageRisk) {
+
+}
+
 
 //
 // Helper
@@ -332,10 +368,10 @@ pub fn analyze_repo(
 
     // .non_rust_loc
     // .rust_loc
-    loc_and_everything(&mut package_risk);
+    get_loc(&mut package_risk);
 
     // .unsafe_loc
-
+    analyze_unsafe(&mut package_risk);
 
     // .stargazers_count
     // TODO: also retrieve latest SHA commit (of release)
@@ -352,48 +388,3 @@ pub fn analyze_repo(
   Ok((main_dependencies, analysis_result))
 }
 
-
-fn loc_and_everything(package_risk: &mut PackageRisk) {
-  // TODO: use WalkParallel
-  let package_path = package_risk.manifest_path.parent().unwrap();
-  let walker = ignore::WalkBuilder::new(package_path).build();
-  for result in walker {
-    let file = result.unwrap();
-    if !file.file_type().unwrap().is_file() {
-      continue; // TODO: we ignore symlink here, do we want this?
-    }
-    let filepath = match file.path().to_str() {
-      Some(x) => x,
-      None => {
-        eprintln!("couldn't convert the path to string {:?}", file.path());
-        return;
-      }
-    };
-
-    // look for all lines of code (not just rust)
-    let lang = loc::lang_from_ext(filepath);
-    if lang != loc::Lang::Unrecognized {
-      let count = loc::count(filepath);
-      // update
-      package_risk.non_rust_loc += u64::from(count.code);
-      if lang == loc::Lang::Rust {
-        package_risk.rust_loc += u64::from(count.code);
-      }
-    }
-
-    // look for unsafe lines of code (not including tests)
-    if let Ok(res) = geiger::find_unsafe_in_file(
-      std::path::Path::new(filepath),
-      geiger::IncludeTests::No,
-    ) {
-      // update
-      // TODO: this gives bad results for some reason
-      let mut unsafe_loc = res.counters.functions.unsafe_;
-      unsafe_loc += res.counters.exprs.unsafe_;
-      unsafe_loc += res.counters.item_impls.unsafe_;
-      unsafe_loc += res.counters.item_traits.unsafe_;
-      unsafe_loc += res.counters.methods.unsafe_;
-      package_risk.unsafe_loc += unsafe_loc;
-    }
-  }
-}
