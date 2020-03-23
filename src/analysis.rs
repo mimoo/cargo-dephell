@@ -144,6 +144,33 @@ fn get_root_importers(package_graph: &PackageGraph, root_crates: &HashSet<&Packa
   root_importers
 }
 
+fn get_exclusive_deps(package_graph: &PackageGraph, root_crates: &HashSet<&PackageId>, dependency: &PackageId) -> Vec<PackageId> {
+  // get all the transitive dependencies of `dependency`
+  let transitive_deps = package_graph.select_forward(std::iter::once(dependency)).unwrap();
+  let transitive_deps = transitive_deps.into_iter_ids(Some(DependencyDirection::Forward));
+  // re-create a graph without edges leading to our dependency (and its tree)
+  let mut package_graph = package_graph.clone();
+  package_graph.retain_edges(|_, dep_link| {
+    !(dep_link.to.id() == dependency)
+  });
+  // obtain all dependencies from the root_crates
+  let new_all = package_graph.select_forward(root_crates.clone()).unwrap();
+  let new_all: Vec<_> = new_all.into_iter_ids(Some(DependencyDirection::Forward)).collect();
+  // check if the original transitive dependencies are in there
+  let mut exclusive_deps = Vec::new();
+  for transitive_dep in transitive_deps {
+    // don't include the dependency itself in this list
+    if transitive_dep == dependency {
+      continue;
+    }
+    // if it's not in the new graph, it's exclusive to our dependency!
+    if !new_all.contains(&transitive_dep) {
+      exclusive_deps.push(transitive_dep.clone());
+    }
+  }
+  exclusive_deps
+}
+
 //
 // Helper
 // ------
@@ -266,8 +293,8 @@ pub fn analyze_repo(
     create_or_update_dependency(&mut analysis_result, &dep_link);
   }
 
-  // First pass analyze
-  // ------------------
+  // Analyze!
+  // --------
   //
 
   for (package_id, mut package_risk) in analysis_result.iter_mut() {
@@ -299,7 +326,9 @@ pub fn analyze_repo(
     let root_importers = get_root_importers(&package_graph, &root_crates_to_analyze, package_id);
     package_risk.root_importers = root_importers;
 
-    // .total_new_third_deps
+    // .exclusive_deps_introduced
+    let exclusive_deps_introduced = get_exclusive_deps(&package_graph, &root_crates_to_analyze, package_id);
+    package_risk.exclusive_deps_introduced = exclusive_deps_introduced;
 
     // .non_rust_loc
     // .rust_loc
