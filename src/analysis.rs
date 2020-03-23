@@ -325,7 +325,7 @@ pub fn analyze_repo(
 
 
 fn loc_and_everything(package_risk: &mut PackageRisk) {
-  // TODO: use WalkParallel?
+  // TODO: use WalkParallel
   let package_path = package_risk.manifest_path.parent().unwrap();
   let walker = ignore::WalkBuilder::new(package_path).build();
   for result in walker {
@@ -340,9 +340,6 @@ fn loc_and_everything(package_risk: &mut PackageRisk) {
         return;
       }
     };
-    if filepath.contains("test") {
-      continue; // TODO: this is a ghetto way of ignore tests
-    }
 
     // look for all lines of code (not just rust)
     let lang = loc::lang_from_ext(filepath);
