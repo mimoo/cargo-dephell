@@ -48,7 +48,7 @@ pub struct PackageRisk {
   // TODO: implement this
   /// total number of transitive third party dependencies imported
   /// by this dependency, and only by this dependency
-  pub exclusive_deps_introduced: u64,
+  pub exclusive_deps_introduced: Vec<PackageId>,
 
   /// number of non-rust lines-of-code
   pub non_rust_loc: u64,
@@ -61,16 +61,6 @@ pub struct PackageRisk {
 
   /// number of github stars, if any
   pub stargazers_count: u64,
-
-  // TODO: no need for these, we can do that in js
-  /// number of non-rust lines-of-code, including transitive dependencies
-  pub total_non_rust_loc: u64,
-
-  // number of rust lines-of-code, including transitive dependencies
-  pub total_rust_loc: u64,
-
-  // number of lines of unsafe code, including transitive dependencies
-  pub total_unsafe_loc: u64,
 }
 
 /*
@@ -152,49 +142,6 @@ fn get_root_importers(package_graph: &PackageGraph, root_crates: &HashSet<&Packa
     .collect();
   let root_importers = root_importers.iter().map(|pkg_metadata| pkg_metadata.id().clone()).collect();
   root_importers
-}
-
-
-fn get_total_loc(analysis_result: &mut HashMap<PackageId, PackageRisk>, package_id: &PackageId) -> (u64, u64, u64) {
-  let mut total_non_rust_loc = 0;
-  let mut total_rust_loc = 0;
-  let mut total_unsafe_loc = 0;
-
-  // obtain transitive dependencies (sorted in reverse order)
-  let package_risk = analysis_result.get(package_id).unwrap();
-  let transitive_dependencies = package_risk.transitive_dependencies.clone();
-  for transitive_dependency in transitive_dependencies {
-    // calculate its total LOC first
-    let package_risk = analysis_result.get(&transitive_dependency).unwrap();
-    if package_risk.total_rust_loc == 0 {
-      let mut total_non_rust_loc = 0;
-      let mut total_rust_loc = 0;
-      let mut total_unsafe_loc = 0;
-      let transitive_dependencies = &package_risk.transitive_dependencies;
-      for transitive_dependency in transitive_dependencies {
-        let package_risk = analysis_result.get(&transitive_dependency).unwrap();
-        if package_risk.total_rust_loc == 0 {
-          // TODO: this is unfortunately not true :(
-          unreachable!(); // because the dependencies are given in reverse order
-        }
-        total_non_rust_loc += package_risk.total_non_rust_loc;
-        total_rust_loc += package_risk.total_rust_loc;
-        total_unsafe_loc += package_risk.total_unsafe_loc;
-      }
-      let mut package_risk = analysis_result.get_mut(&transitive_dependency).unwrap();
-      package_risk.total_non_rust_loc = total_non_rust_loc;
-      package_risk.total_rust_loc = total_rust_loc;
-      package_risk.total_unsafe_loc = total_unsafe_loc;
-    }
-    // add to the total
-    let package_risk = analysis_result.get(package_id).unwrap();
-    total_non_rust_loc += package_risk.total_non_rust_loc;
-    total_rust_loc += package_risk.total_rust_loc;
-    total_unsafe_loc += package_risk.total_unsafe_loc;
-  }
-
-  //
-  (total_non_rust_loc, total_rust_loc, total_unsafe_loc)
 }
 
 //
@@ -360,35 +307,16 @@ pub fn analyze_repo(
 
     // .unsafe_loc
 
-    // .total_...
-    if package_risk.transitive_dependencies.len() == 0 {
-      package_risk.total_non_rust_loc = package_risk.non_rust_loc;
-      package_risk.total_rust_loc = package_risk.rust_loc;
-      package_risk.total_unsafe_loc = package_risk.unsafe_loc;
-    }
 
     // .stargazers_count
+    // TODO: also retrieve latest SHA commit (of release)
+    // TODO: also compare it to the hash to the repo we have (this signals a big problem)
     if let Some(repo) = &package_risk.repo {
       let stars = GithubResponse::get_github_stars(http_client.clone(), github_token, &repo);
       if let Some(stars) = stars {
         package_risk.stargazers_count = stars;
       }
     }
-  }
-
-  // Second pass analyze
-  // -------------------
-  // we can now compute stats that include a dependency's transitive dependencies
-  //
-
-  let package_ids: Vec<PackageId> = analysis_result.keys().map(|x| x.to_owned()).collect();
-  for package_id in package_ids {
-    let (total_non_rust_loc, total_rust_loc, total_unsafe_loc) = get_total_loc(&mut analysis_result, &package_id);
-
-    let package_risk = analysis_result.get_mut(&package_id).unwrap();
-    package_risk.total_non_rust_loc = total_non_rust_loc;
-    package_risk.total_rust_loc = total_rust_loc;
-    package_risk.total_unsafe_loc = total_unsafe_loc;
   }
 
   //

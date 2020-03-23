@@ -117,7 +117,7 @@
         </div>
     </header>
     <div class="container">
-        <p>This is a list of dependencies collected from {{ path }}.</p>
+        <p>This page was generated with <a href="https://github.com/mimoo/cargo-dephell">cargo dephell</a>. It lists the dependencies used by {{ path }}.</p>
         <nav>
             
         </nav>
@@ -125,58 +125,49 @@
             <thead>
                 <tr>
                     <th>
-                        <span data-tippy-content="the name of the dependency">
-                            dependency 
-                        </span>
-                        <a href="#name" class="sort"><i class="fas fa-sort"></i></a>
+                        <a href="#name" data-tippy-content="the name of the dependency">
+                            dependency
+                        </a>
                     </th>
                     <th>
-                        <span data-tippy-content="the number of dependencies that this dependency end up adding (if all features are set)">
+                        <a href="#transitive_dependencies" data-tippy-content="the number of dependencies that this dependency end up adding (if all features are set)">
                             transitive dependencies
-                        </span>
-                        <a href="#transitive_dependencies" class="sort"><i class="fas fa-sort"></i></a>
+                        </a>
                     </th>
                     <th>
-                        <span data-tippy-content="the number of different versions of this dependency that are imported in the workspace">
+                        <a href="#versions" data-tippy-content="the number of different versions of this dependency that are imported in the workspace">
                             versions imported
-                        </span>
-                        <a href="#versions" class="sort"><i class="fas fa-sort"></i></a>
+                        </a>
                     </th>
                     <th>
-                        <span data-tippy-content="the number of workspace crates that have this dependency as transitive dependency">
+                        <a href="#root_importers" data-tippy-content="the number of workspace crates that have this dependency as transitive dependency">
                             imported by
-                        </span>
-                        <a href="#root_importers" class="sort"><i class="fas fa-sort"></i></a>
+                        </a>
                     </th>
                     <th>
-                        <span data-tippy-content="the number of dependencies that are introduced only by having this dependency">
+                        <a href="#exclusive_deps_introduced" data-tippy-content="the number of dependencies that are introduced only by having this dependency">
                             exclusive dependencies introduced
-                        </span>
-                        <a href="#exclusive_deps_introduced" class="sort"><i class="fas fa-sort"></i></a>
+                        </a>
                     </th>
                     <th>
-                        <span data-tippy-content="total lines of code for C, C++, etc. that might end up being imported by having this dependency (this includes transitive dependencies)">
+                        <a href="#non_rust_loc" data-tippy-content="total lines of code for C, C++, etc. that might end up being imported by having this dependency (this includes transitive dependencies)">
                             lines of non-rust code
-                        </span>
-                        <a href="#non_rust_loc" class="sort"><i class="fas fa-sort"></i></a>
+                        </a>
                     </th>
                     <th>
-                        <span data-tippy-content="total lines of rust code for this dependency and its transitive dependencies">
+                        <a href="#rust_loc" data-tippy-content="total lines of rust code for this dependency and its transitive dependencies">
                             lines of rust code
-                        </span>
-                        <a href="#rust_loc" class="sort"><i class="fas fa-sort"></i></a>
+                        </a>
                     </th>
                     <th>
-                        <span data-tippy-content="total lines of unsafe rust code for this dependency and its transitive dependencies">
+                        <a href="#unsafe_loc" data-tippy-content="total lines of unsafe rust code for this dependency and its transitive dependencies">
                             unsafe lines
-                        </span>
-                        <a href="#unsafe_loc" class="sort"><i class="fas fa-sort"></i></a>
+                        </a>
                     </th>
                     <th>
-                        <span data-tippy-content="number of github stars (only if the dependency has a github repository)">
+                        <a href="#stargazers_count" data-tippy-content="number of github stars (only if the dependency has a github repository)">
                             github stars
-                        </span>
-                        <a href="#stargazers_count" class="sort"><i class="fas fa-sort"></i></a>
+                        </a>
                     </th>
                 </tr>
             </thead>
@@ -198,6 +189,7 @@
         // TODO: clickable dependencies
         // TODO: home button
         // TODO: logo
+        // TODO: compress/uncompress the JSON?
 
         //
         // function to modify the table
@@ -224,13 +216,13 @@
             html += "<td>" + package["versions"].length + "</td>";
             html += "<td>" + package["root_importers"].length + "</td>";
             html += "<td>" + package["exclusive_deps_introduced"].length + "</td>";
-            html += "<td>" + package["non_rust_loc"] + "</td>";
-            html += "<td>" + package["rust_loc"] + "</td>";
-            html += "<td>" + package["unsafe_loc"] + "</td>";
+            html += "<td>" + package["non_rust_loc"].toLocaleString() + "</td>";
+            html += "<td>" + package["rust_loc"].toLocaleString() + "</td>";
+            html += "<td>" + package["unsafe_loc"].toLocaleString() + "</td>";
             if (package["repo"] != null) {
-                html += '<td><a href="'+package["repo"]+'">' + package["stargazers_count"] + "</a></td>";
+                html += '<td><a href="'+package["repo"]+'">' + package["stargazers_count"].toLocaleString() + "</a></td>";
             } else {
-                html += "<td>" + package["stargazers_count"] + "</td>";
+                html += "<td>" + package["stargazers_count"].toLocaleString() + "</td>";
             }
             html += "</tr>"
             document.querySelector("tbody").innerHTML += html;
@@ -262,8 +254,8 @@
         }
 
         //
-        // interaction
-        // ------
+        // clicking on dependencies
+        // ------------------------
 
         // clicking on a dependency gives us a view of a specific dependency
         document.querySelector("tbody").addEventListener("click", (event) => {
@@ -274,6 +266,7 @@
             let package_name = event.target.innerHTML;
             let package_id = event.target.getAttribute("href");
             // refresh
+            reset_sort_icons();
             nav_click(package_name);
             clean_table();
             display_packages(analysis_result[package_id]["transitive_dependencies"]);
@@ -281,39 +274,54 @@
             event.preventDefault();
         });
 
-        const sort_buttons = document.querySelectorAll(".sort");
+        //
+        // sorting
+        // ------
+
+        const sort_buttons = document.querySelectorAll("th a");
         for (const sort_button of sort_buttons) {
             sort_button.addEventListener("click", (event) => sort_click(event));
         }
 
         function reset_sort_icons() {
-            const sort_buttons = document.querySelectorAll("th svg");
-            for (sort_button of sort_buttons) {
-                sort_button.classList.remove("fa-sort-up", "fa-sort-down");
-                sort_button.classList.add("fa-sort");
-            }
+            const sort_buttons = document.querySelectorAll("th svg").forEach(e => e.parentNode.removeChild(e));
         }
         
         function sort_click(event) {
             console.log(event);
             // get info
-            let to_sort = event.currentTarget.getAttribute("href").slice(1); // get rid of "#..."
-            let icon_clicked = event.currentTarget.querySelector("svg");
+            let to_sort = event.target.getAttribute("href").slice(1); // get rid of "#..."
             // figure out how to sort
-            let sort_asc = true;
-            if (icon_clicked.classList.contains("fa-sort-up")) {
-                sort_asc = false;
+            let sort_asc = false;
+            let thing = event.target.querySelector("svg");
+            if (thing && thing.classList.contains("fa-sort-down")) {
+                sort_asc = true;
             }
             // reset sort icons
             reset_sort_icons();
             // sort and update sort icon
-            icon_clicked.classList.remove("fa-sort");
             if (sort_asc) {
-                icon_clicked.classList.add("fa-sort-up");
-                current_packages.sort((a, b) => (analysis_result[a][to_sort] > analysis_result[b][to_sort]) ? 1 : -1);
+                event.target.innerHTML += '<i class="fas fa-sort-up"></i>';
+                current_packages.sort((a, b) => {
+                    a = analysis_result[a][to_sort];
+                    b = analysis_result[b][to_sort];
+                    if (Array.isArray(a)) {
+                        a = a.length;
+                        b = b.length;
+                    }
+                    return (a > b) ? 1 : -1;
+                });
             } else {
-                icon_clicked.classList.add("fa-sort-down");
-                current_packages.sort((a, b) => (analysis_result[a][to_sort] < analysis_result[b][to_sort]) ? 1 : -1);
+                event.target.innerHTML += '<i class="fas fa-sort-down"></i>';
+                current_packages.sort((a, b) => {
+                    a = analysis_result[a][to_sort];
+                    b = analysis_result[b][to_sort];
+                    if (Array.isArray(a)) {
+                        a = a.length;
+                        b = b.length;
+                    }
+                    return (a < b) ? 1 : -1;
+                });
             }
             // refresh table
             clean_table();
