@@ -2,6 +2,7 @@
 #![feature(proc_macro_hygiene, decl_macro)] // Nightly-only language features needed by Rocket
 
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
 use askama::Template;
 use clap::{App, Arg};
@@ -51,8 +52,7 @@ fn main() {
                 .short("m")
                 .long("manifest-path")
                 .takes_value(true)
-                .value_name("PATH")
-                .default_value("./Cargo.toml"),
+                .value_name("PATH"),
         )
         .arg(
             Arg::with_name("html-output")
@@ -90,7 +90,12 @@ fn main() {
     // get metadata from manifest path
     let manifest_path = matches
         .value_of("manifest-path")
-        .expect("must provide a manifest-path");
+        .map(|s| s.to_owned())
+        .unwrap_or_else(|| {
+            let mut current_dir = PathBuf::from(std::env::current_dir().unwrap());
+            current_dir.push("Cargo.toml");
+            current_dir.to_str().unwrap().to_owned()
+        });
 
     // pretty hello world :>
     let pretty_line = "=========================";
@@ -132,7 +137,7 @@ fn main() {
     let to_ignore: Option<Vec<&str>> = to_ignore.map(|x| x.collect());
     
     // do the analysis
-    let result = analysis::analyze_repo(manifest_path, http_client, github_token, to_ignore);
+    let result = analysis::analyze_repo(&manifest_path, http_client, github_token, to_ignore);
     let (main_dependencies, analysis_result) = match result {
         Err(err) => {
             eprintln!("{}", err);
@@ -156,7 +161,7 @@ fn main() {
             println!("{}", json_result);
         }
         Some(html_output) => {
-            let name = std::path::Path::new(manifest_path).parent().unwrap().file_name().unwrap().to_str().unwrap().to_owned();
+            let name = std::path::Path::new(&manifest_path).parent().unwrap().file_name().unwrap().to_str().unwrap().to_owned();
             let html_page = HtmlList {
                 name: name,
                 json_result: json_result,

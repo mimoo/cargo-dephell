@@ -5,6 +5,7 @@ use guppy::graph::{DependencyDirection, PackageGraph, PackageMetadata, Dependenc
 use guppy::{MetadataCommand, PackageId};
 use regex::Regex;
 use serde::{Serialize, Deserialize};
+use tempdir::TempDir;
 
 //
 // Essential Structs
@@ -62,19 +63,6 @@ pub struct PackageRisk {
   /// number of github stars, if any
   pub stargazers_count: u64,
 }
-
-/*
-should be implemented client side no?
-impl PackageRisk {
-    /// risk_score computes a weighted score based on the analysis of the crate.
-    fn risk_score(&self) -> u64 {
-        let mut risk_score = self.total_third_deps * 5000;
-        risk_score += self.loc;
-        risk_score += self.unsafe_loc * 5000;
-        risk_score
-    }
-}
-*/
 
 //
 // Analysis Functions
@@ -204,10 +192,9 @@ fn get_loc(package_risk: &mut PackageRisk) {
 }
 
 fn analyze_unsafe(package_risk: &mut PackageRisk) {
-  let rs_files = crate::crate_files::get_rs_files(&package_risk.manifest_path);
+  //let rs_files = crate::crate_files::get_rs_files(package_risk.name.clone(), &package_risk.manifest_path);
 
 }
-
 
 //
 // Helper
@@ -331,6 +318,41 @@ pub fn analyze_repo(
     create_or_update_dependency(&mut analysis_result, &dep_link);
   }
 
+  //
+  // Build the workspace/crate to obtain dep files
+  // ---------------------------------------------
+  //
+
+  // cargo clean
+  /*
+  std::process::Command::new("cargo")
+    .args(&[
+      "clean", 
+      "--manifest-path", 
+      manifest_path,
+      "-q"
+    ])
+    .output()
+    .expect("failed to clean crate");
+  */
+
+  // cargo build
+  let target_dir = TempDir::new("target_dir").expect("could not create temporary folder");
+  println!("target-dir: {:?}", target_dir);
+  let a = std::process::Command::new("cargo")
+    .args(&[
+      "build", 
+      "--manifest-path", 
+      manifest_path,
+      "--target-dir",
+      target_dir.path().to_str().unwrap(),
+      "-q"
+    ])
+    .output()
+    .expect("failed to build crate");
+
+  // clean temporary folders
+
   // Analyze!
   // --------
   //
@@ -368,8 +390,7 @@ pub fn analyze_repo(
     let exclusive_deps_introduced = get_exclusive_deps(&package_graph, &root_crates_to_analyze, package_id);
     package_risk.exclusive_deps_introduced = exclusive_deps_introduced;
 
-    // .non_rust_loc
-    // .rust_loc
+    // .non_rust_loc + .rust_loc
     get_loc(&mut package_risk);
 
     // .unsafe_loc
