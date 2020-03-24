@@ -3,12 +3,15 @@ name = "cargo-dephell"
 version = "0.1.0"
 authors = ["David Wong <davidwg@calibra.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+categories = ["command-line-utilities", "development-tools", "development-tools::cargo-plugins", "dependencies"]
+description = "Analyzes a project's third-party dependencies."
+keywords = ["dependencies", "unsafe", "security", "loc", "cargo", "plugin"]
+repository = "https://github.com/mimoo/cargo-dephell"
 
 [dependencies]
 ignore = "0.4.12" # to walk through files of a directory
 guppy = "0.1.6"   # to analyze dependencies
+cargo = "0.43.1"  # to get rust files in a crate
 geiger = "0.4.3"  # to calculate number of unsafe lines of code
 loc = "0.5.0"     # to calculate number of lines of code
 regex = "1.3.5"   # used to match a repository link with a github repo
@@ -17,13 +20,8 @@ reqwest = { version = "0.10.4", features = ["blocking", "json"] } # github queri
 # CLI stuff
 clap = "2.33.0" 
 
-# webpage
-rocket = "0.4.4"
+# HTML
 serde_json = "1.0" # to print the result as JSON
 askama = "0.9.0"     # to print the result as HTML
 serde = { version = "1.0", features = ["derive"] }
 
-[dependencies.rocket_contrib]
-version = "0.4.4"
-default-features = false
-features = ["json"]

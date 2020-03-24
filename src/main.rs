@@ -1,7 +1,7 @@
 // needed for rocket
 #![feature(proc_macro_hygiene, decl_macro)] // Nightly-only language features needed by Rocket
 
-use std::collections::{hash_map::HashMap, hash_set::HashSet};
+use std::collections::{HashMap, HashSet};
 
 use askama::Template;
 use clap::{App, Arg};
@@ -9,6 +9,7 @@ use serde::{Serialize, Deserialize};
 use guppy::PackageId;
 
 mod analysis;
+mod crate_files;
 
 //
 // HTML Stuff

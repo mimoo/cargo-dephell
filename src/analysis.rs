@@ -1,4 +1,4 @@
-use std::collections::{hash_set::HashSet, hash_map::{HashMap, Entry}};
+use std::collections::{HashSet, hash_map::{HashMap, Entry}};
 use std::iter::FromIterator;
 use std::path::{PathBuf};
 use guppy::graph::{DependencyDirection, PackageGraph, PackageMetadata, DependencyLink};
@@ -171,7 +171,8 @@ fn get_exclusive_deps(package_graph: &PackageGraph, root_crates: &HashSet<&Packa
   exclusive_deps
 }
 
-
+// TODO: I get really bad results with this right now because some of the dependencies are inside the package
+// TODO: I should really just use geiger's technique to count the LOCs
 fn get_loc(package_risk: &mut PackageRisk) {
   let package_path = package_risk.manifest_path.parent().unwrap();
   // TODO: use WalkParallel
@@ -179,7 +180,7 @@ fn get_loc(package_risk: &mut PackageRisk) {
   for result in walker {
     let file = result.unwrap();
     if !file.file_type().unwrap().is_file() {
-      continue; // TODO: we ignore symlink here, do we want this?
+      continue; // TODO: we ignore symlink here, do we want this? (maybe using canonicalize will fix this)
     }
     let filepath = match file.path().to_str() {
       Some(x) => x,
@@ -203,6 +204,7 @@ fn get_loc(package_risk: &mut PackageRisk) {
 }
 
 fn analyze_unsafe(package_risk: &mut PackageRisk) {
+  let rs_files = crate::crate_files::get_rs_files(&package_risk.manifest_path);
 
 }
 

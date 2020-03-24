@@ -33,9 +33,23 @@
             padding:20px 0 20px;
         }
 
+        nav {
+            margin-bottom:10px;
+        }
+
+        nav a {
+            text-decoration:none;
+            color:black;
+        }
+
         .container {
             max-width: 1000px;
             margin: auto;
+        }
+
+        #jumbotron {
+            padding:10px;
+            background-color:cornsilk;
         }
 
         table {
@@ -72,6 +86,11 @@
         td {
             font-weight: 200;
             font-size: 15px;
+            text-align:center;
+            padding:0 5px;
+        }
+        td:first-child {
+            text-align:center;
         }
 
         td a {
@@ -80,9 +99,6 @@
             border-bottom:1px solid black;
         }
 
-        td:first-child {
-            text-align:center;
-        }
 
         .hide {
             display: none;
@@ -114,9 +130,6 @@
 
         button:active  {background: #72B08E;}
 
-        nav {
-            margin-bottom:10px;
-        }
     </style>
 </head>
 
@@ -127,7 +140,7 @@
         </div>
     </header>
     <div class="container">
-        <p>This page was generated with <a href="https://github.com/mimoo/cargo-dephell">cargo dephell</a>. It lists the dependencies used by <strong>{{ name }}</strong>. For more information about the methodology check the <a href="https://github.com/mimoo/cargo-dephell">README</a>.</p>
+        <p id="jumbotron">This page was generated with <a href="https://github.com/mimoo/cargo-dephell">cargo dephell</a>. It lists the dependencies used by <strong>{{ name }}</strong>. For more information about the methodology check the <a href="https://github.com/mimoo/cargo-dephell">README</a>.</p>
         <nav>
             
         </nav>
@@ -136,11 +149,11 @@
                 <tr>
                     <th>
                         <a href="#name" data-tippy-content="the name of the dependency">
-                            dependency
+                            crate name
                         </a>
                     </th>
                     <th>
-                        <a href="#transitive_dependencies" data-tippy-content="the number of dependencies that this dependency end up adding (if all features are set)">
+                        <a href="#transitive_dependencies" data-tippy-content="the number of dependencies that this package end up adding (if all features are set) not including this package">
                             transitive dependencies
                         </a>
                     </th>
