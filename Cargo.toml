@@ -10,6 +10,7 @@ repository = "https://github.com/mimoo/cargo-dephell"
 
 [dependencies]
 tempdir = "0.3.7" # to build the main crate
+glob = "0.3.0"
 ignore = "0.4.12" # to walk through files of a directory
 guppy = "0.1.6"   # to analyze dependencies
 cargo = "0.43.1"  # to get rust files in a crate

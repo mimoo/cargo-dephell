@@ -207,6 +207,7 @@ dependencies = [
  "cargo",
  "clap",
  "geiger",
+ "glob",
  "guppy",
  "ignore",
  "loc",
