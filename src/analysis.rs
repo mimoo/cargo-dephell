@@ -19,23 +19,32 @@ use tempdir::TempDir;
 //
 
 /// PackageRisk contains information about a package after analysis.
+#[rustfmt::skip]
 #[derive(Default, Serialize, Deserialize)]
 pub struct PackageRisk {
+
   // metadata
   // --------
+
   /// name of the dependency
   pub name: String,
   /// potentially different versions are pulled (bad)
   pub versions: HashSet<String>,
   /// link to its repository
   pub repo: Option<String>,
+
   // useful for analysis
   // -------------------
+
   /// path to the actual source code on disk
   #[serde(skip)]
   pub manifest_path: PathBuf,
+
   // analysis result
   // ---------------
+
+  /// is this dependency used for the host target and features?
+  pub used: bool,
   /// transitive dependencies (not including this dependency)
   pub transitive_dependencies: HashSet<PackageId>,
   /// number of root crates that import this package
@@ -253,13 +262,17 @@ fn get_every_file_in_folder(package_path: &Path) -> HashSet<String> {
 }
 
 /// obtains a dependency's files (might be accurate or not)
-fn get_dependency_files(package_risk: &mut PackageRisk, target_dir: &Path) -> HashSet<String> {
+fn get_dependency_files(
+  package_name: &str,
+  manifest_path: &Path,
+  target_dir: &Path,
+) -> (bool, HashSet<String>) {
   use glob::glob;
 
   // find the dep-info file for that dependency
   let mut dep_files_path = target_dir.to_path_buf();
   dep_files_path.push("debug/deps");
-  let without_underscore_name = package_risk.name.clone().replace("-", "_");
+  let without_underscore_name = package_name.replace("-", "_");
   let dependency_file = format!("{}-*.d", without_underscore_name);
   dep_files_path.push(dependency_file);
   let dep_files_path = glob(dep_files_path.to_str().unwrap()).unwrap().next();
@@ -267,13 +280,15 @@ fn get_dependency_files(package_risk: &mut PackageRisk, target_dir: &Path) -> Ha
     // we found a dep-info file
     Some(glob_result) => {
       let dep_files_path = glob_result.unwrap();
-      parse_rustc_dep_info(dep_files_path.as_path())
+      let dependency_files = parse_rustc_dep_info(dep_files_path.as_path());
+      (true, dependency_files)
     }
-    // we didn't find a dep-info file, let's do it the old fashion way
+    // this dependency is not part of our target+features: let's do it the old fashion way
     None => {
-      eprintln!("dephell: no dep-info file found for {}", package_risk.name);
-      let package_path = package_risk.manifest_path.parent().unwrap();
-      get_every_file_in_folder(package_path)
+      eprintln!("dephell: no dep-info file found for {}", package_name);
+      let package_path = manifest_path.parent().unwrap();
+      let dependency_files = get_every_file_in_folder(package_path);
+      (false, dependency_files)
     }
   }
 }
@@ -449,9 +464,18 @@ pub fn analyze_repo(
       get_exclusive_deps(&package_graph, &root_crates_to_analyze, package_id);
     package_risk.exclusive_deps_introduced = exclusive_deps_introduced;
 
-    // .non_rust_loc + .rust_loc + unsafe_loc
-    let dependency_files = get_dependency_files(&mut package_risk, &target_dir);
+    // .in_host_target
+    let (used, dependency_files) = get_dependency_files(
+      &package_risk.name,
+      package_risk.manifest_path.as_path(),
+      &target_dir,
+    );
+    package_risk.used = used;
+
+    // .non_rust_loc + .rust_loc
     get_loc(&mut package_risk, &dependency_files);
+
+    // .unsafe_loc
     get_unsafe(&mut package_risk, &dependency_files);
 
     // .stargazers_count
