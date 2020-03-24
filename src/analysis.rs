@@ -36,11 +36,8 @@ pub struct PackageRisk {
   pub manifest_path: PathBuf,
   // analysis result
   // ---------------
-  /// transitive dependencies (in reversed direction)
+  /// transitive dependencies (not including this dependency)
   pub transitive_dependencies: HashSet<PackageId>,
-  /// total number of transitive third party dependencies imported
-  /// by this dependency (not including this dependency)
-  pub total_third_deps: u64,
   /// number of root crates that import this package
   pub root_importers: Vec<PackageId>,
   /// total number of transitive third party dependencies imported
@@ -333,6 +330,7 @@ pub fn analyze_repo(
   github_token: Option<(&str, &str)>,
   to_ignore: Option<Vec<&str>>,
 ) -> Result<(HashSet<PackageId>, HashMap<PackageId, PackageRisk>), String> {
+  //
   // Obtain package graph via guppy
   // ------------------------------
   //
@@ -340,7 +338,6 @@ pub fn analyze_repo(
   // obtain metadata from manifest_path
   let mut cmd = MetadataCommand::new();
   cmd.manifest_path(manifest_path);
-  // TODO: save this metadata to a json file
 
   // construct graph with guppy
   let package_graph = PackageGraph::from_command(&mut cmd).map_err(|err| err.to_string())?;
@@ -440,21 +437,6 @@ pub fn analyze_repo(
       .into_iter_links(Some(DependencyDirection::Reverse))
       .map(|package_id| package_id.to.id().to_owned())
       .collect();
-
-    // TODO: might not need this field, since we have len(transitive_dependencies)
-    // TODO: also, aren't we doing the same thing above here?
-    // .total_third_deps
-    let mut transitive_deps = HashSet::new();
-    for possible_dep in package_graph.package_ids() {
-      // ignore root dependencies
-      if root_crates.contains(possible_dep) {
-        continue;
-      }
-      if package_graph.depends_on(package_id, possible_dep).unwrap() {
-        transitive_deps.insert(possible_dep);
-      }
-    }
-    package_risk.total_third_deps = transitive_deps.len() as u64;
 
     // .root_importers
     let root_importers = get_root_importers(&package_graph, &root_crates_to_analyze, package_id);
