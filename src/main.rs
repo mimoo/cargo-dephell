@@ -6,11 +6,10 @@ use std::path::PathBuf;
 
 use askama::Template;
 use clap::{App, Arg};
-use serde::{Serialize, Deserialize};
 use guppy::PackageId;
+use serde::{Deserialize, Serialize};
 
 mod analysis;
-mod crate_files;
 
 //
 // HTML Stuff
@@ -18,7 +17,7 @@ mod crate_files;
 //
 
 #[derive(Template)]
-#[template(path = "list.html", escape="none")]
+#[template(path = "list.html", escape = "none")]
 struct HtmlList {
     name: String,
     json_result: String,
@@ -104,22 +103,19 @@ fn main() {
     println!("{}", pretty_line);
 
     // parse github token (if given)
-    let github_token = matches
-        .value_of("github-token")
-        .and_then(|github_token| {
-            let github_token: Vec<&str> = github_token.split(":").collect();
-            if github_token.len() != 2 {
-                eprintln!("wrong github-token, must be of the form username:token");
-                return None;
-            }
-            let username = github_token[0];
-            let token = github_token[1];
-            Some((username, token))
-        });
+    let github_token = matches.value_of("github-token").and_then(|github_token| {
+        let github_token: Vec<&str> = github_token.split(":").collect();
+        if github_token.len() != 2 {
+            eprintln!("wrong github-token, must be of the form username:token");
+            return None;
+        }
+        let username = github_token[0];
+        let token = github_token[1];
+        Some((username, token))
+    });
 
     // create an HTTP client (used for example to query github API to get # of stars)
-    let mut http_client =
-    reqwest::blocking::ClientBuilder::new().user_agent("mimoo/cargo-dephell");
+    let mut http_client = reqwest::blocking::ClientBuilder::new().user_agent("mimoo/cargo-dephell");
     if let Some(proxy) = matches.value_of("proxy") {
         let reqwest_proxy = match reqwest::Proxy::all(proxy) {
             Ok(x) => x,
@@ -135,7 +131,6 @@ fn main() {
     // parse dependencies to ignore
     let to_ignore = matches.values_of("ignore-workspace");
     let to_ignore: Option<Vec<&str>> = to_ignore.map(|x| x.collect());
-    
     // do the analysis
     let result = analysis::analyze_repo(&manifest_path, http_client, github_token, to_ignore);
     let (main_dependencies, analysis_result) = match result {
@@ -161,7 +156,14 @@ fn main() {
             println!("{}", json_result);
         }
         Some(html_output) => {
-            let name = std::path::Path::new(&manifest_path).parent().unwrap().file_name().unwrap().to_str().unwrap().to_owned();
+            let name = std::path::Path::new(&manifest_path)
+                .parent()
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned();
             let html_page = HtmlList {
                 name: name,
                 json_result: json_result,
@@ -177,6 +179,5 @@ fn main() {
             println!("html output saved at {}", html_output);
         }
     };
-    
     //
 }

@@ -43,7 +43,6 @@ pub struct PackageRisk {
   pub total_third_deps: u64,
   /// number of root crates that import this package
   pub root_importers: Vec<PackageId>,
-  // TODO: implement this
   /// total number of transitive third party dependencies imported
   /// by this dependency, and only by this dependency
   pub exclusive_deps_introduced: Vec<PackageId>,
@@ -62,7 +61,7 @@ pub struct PackageRisk {
 // ==================
 //
 
-// GithubResponse is used to parse the response from github
+/// GithubResponse is used to parse the response from github
 #[derive(serde::Deserialize, Debug)]
 struct GithubResponse {
   #[serde(rename = "stargazers_count")]
@@ -92,12 +91,12 @@ impl GithubResponse {
           request = request.basic_auth(username, Some(token));
         }
         // send the request and convert to option
-        eprintln!("sending request to {}", request_url);
+        //        eprintln!("dephell: sending request to {}", request_url);
         request.send().ok()
       })
       .and_then(|resp| {
         if !resp.status().is_success() {
-          eprintln!("github request failed");
+          eprintln!("dephell: github request failed");
           eprintln!("status: {}", resp.status());
           eprintln!("text: {:?}", resp.text());
           return None;
@@ -106,7 +105,7 @@ impl GithubResponse {
         match resp {
           Ok(x) => Some(x.stargazers_count),
           Err(err) => {
-            eprintln!("{}", err);
+            eprintln!("dephell: {}", err);
             None
           }
         }
@@ -114,6 +113,7 @@ impl GithubResponse {
   }
 }
 
+/// obtains all root crates that end up importing this dependency
 fn get_root_importers(
   package_graph: &PackageGraph,
   root_crates: &HashSet<&PackageId>,
@@ -133,6 +133,7 @@ fn get_root_importers(
   root_importers
 }
 
+/// obtains all the dependencies that are introduced by this dependency, and this dependency only
 fn get_exclusive_deps(
   package_graph: &PackageGraph,
   root_crates: &HashSet<&PackageId>,
@@ -168,7 +169,7 @@ fn get_exclusive_deps(
   exclusive_deps
 }
 
-// count the lines-of-code of all the given files
+/// counts the lines-of-code of all the given files
 fn get_loc(package_risk: &mut PackageRisk, dependency_files: &HashSet<String>) {
   for dependency_file in dependency_files {
     // look for all lines of code (not just rust)
@@ -184,7 +185,7 @@ fn get_loc(package_risk: &mut PackageRisk, dependency_files: &HashSet<String>) {
   }
 }
 
-// count the unsafe lines-of-code of all the given rust files
+/// counts the unsafe lines-of-code of all the given rust files
 fn get_unsafe(package_risk: &mut PackageRisk, dependency_files: &HashSet<String>) {
   for dependency_file in dependency_files {
     let dependency_path = Path::new(dependency_file);
@@ -205,9 +206,8 @@ fn get_unsafe(package_risk: &mut PackageRisk, dependency_files: &HashSet<String>
   }
 }
 
-// parse the dep-info files that contain all the files relevant to the compilation of a dependency (these files are like Makefiles)
-// (minus libraries linked via bindings)
-// TODO: what to do about them?
+/// parses the dep-info files that contain all the files relevant to the compilation of a dependency (these files are like Makefiles)
+// TODO: what to do about libraries linked via bindings
 fn parse_rustc_dep_info(rustc_dep_info: &Path) -> HashSet<String> {
   let contents = fs::read_to_string(rustc_dep_info).unwrap();
   // inspired from https://github.com/rust-lang/cargo/blob/13cd4fb1e8be5b8fb44008052cf31a839d745a45/src/cargo/core/compiler/fingerprint.rs#L1646
@@ -221,9 +221,6 @@ fn parse_rustc_dep_info(rustc_dep_info: &Path) -> HashSet<String> {
         while file.ends_with('\\') {
           file.pop();
           file.push(' ');
-          //file.push_str(deps.next().ok_or_else(|| {
-          //internal("malformed dep-info format, trailing \\".to_string())
-          //})?);
           file.push_str(deps.next().expect("malformed dep-info format, trailing \\"));
         }
         dependency_files.insert(file);
@@ -233,7 +230,7 @@ fn parse_rustc_dep_info(rustc_dep_info: &Path) -> HashSet<String> {
   dependency_files
 }
 
-// retrieve every single file in the dependency
+/// retrieves every single file in the folder of the dependency
 fn get_every_file_in_folder(package_path: &Path) -> HashSet<String> {
   let mut dependency_files = HashSet::new();
   let walker = ignore::WalkBuilder::new(package_path).build();
@@ -246,7 +243,10 @@ fn get_every_file_in_folder(package_path: &Path) -> HashSet<String> {
     match file.path().to_str() {
       Some(filepath) => dependency_files.insert(filepath.to_string()),
       None => {
-        eprintln!("couldn't convert the path to string {:?}", file.path());
+        eprintln!(
+          "dephell: couldn't convert the path to string {:?}",
+          file.path()
+        );
         continue;
       }
     };
@@ -255,6 +255,7 @@ fn get_every_file_in_folder(package_path: &Path) -> HashSet<String> {
   dependency_files
 }
 
+/// obtains a dependency's files (might be accurate or not)
 fn get_dependency_files(package_risk: &mut PackageRisk, target_dir: &Path) -> HashSet<String> {
   use glob::glob;
 
@@ -264,7 +265,6 @@ fn get_dependency_files(package_risk: &mut PackageRisk, target_dir: &Path) -> Ha
   let without_underscore_name = package_risk.name.clone().replace("-", "_");
   let dependency_file = format!("{}-*.d", without_underscore_name);
   dep_files_path.push(dependency_file);
-  println!("debug: {:?}", dep_files_path);
   let dep_files_path = glob(dep_files_path.to_str().unwrap()).unwrap().next();
   match dep_files_path {
     // we found a dep-info file
@@ -274,6 +274,7 @@ fn get_dependency_files(package_risk: &mut PackageRisk, target_dir: &Path) -> Ha
     }
     // we didn't find a dep-info file, let's do it the old fashion way
     None => {
+      eprintln!("dephell: no dep-info file found for {}", package_risk.name);
       let package_path = package_risk.manifest_path.parent().unwrap();
       get_every_file_in_folder(package_path)
     }
@@ -415,8 +416,7 @@ pub fn analyze_repo(
 
   let target_dir = TempDir::new("target_dir").expect("could not create temporary folder");
   let target_dir = target_dir.path();
-  println!("target-dir: {:?}", target_dir);
-  let a = std::process::Command::new("cargo")
+  std::process::Command::new("cargo")
     .args(&[
       "build",
       "--manifest-path",
