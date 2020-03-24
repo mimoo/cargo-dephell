@@ -411,6 +411,8 @@ pub fn analyze_repo(
   // ---------------------------------------------
   //
 
+  // TODO: `cargo build --message-format=json` probably has the hashes of the dep-info files
+  // TODO: maybe we don't need to re-build in a different folder (optimization)
   let target_dir = TempDir::new("target_dir").expect("could not create temporary folder");
   let target_dir = target_dir.path();
   std::process::Command::new("cargo")

@@ -20,6 +20,7 @@ mod analysis;
 #[template(path = "list.html", escape = "none")]
 struct HtmlList {
     name: String,
+    // TODO: we might want to compress/base64 this to lighten the HTML output
     json_result: String,
 }
 

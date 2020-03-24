@@ -213,13 +213,8 @@
     <script src="https://unpkg.com/tippy.js@6"></script>
     <!-- custom -->
     <script>
-        // TODO: https://github.com/magjac/d3-graphviz
+        // TODO: https://github.com/magjac/d3-graphviz for dot
         // TODO: compute total_LOC here
-        // TODO: sort column
-        // TODO: clickable dependencies
-        // TODO: home button
-        // TODO: logo
-        // TODO: compress/uncompress the JSON?
 
         //
         // metric functions
@@ -227,7 +222,6 @@
 
         weights = {
             'transitive_dependencies': 5,
-            'total_third_deps': 1,
             'root_importers': 1,
             'exclusive_deps_introduced': 5,
             'non_rust_loc': 1,
@@ -237,10 +231,11 @@
         };
 
         // TODO: this doesn't use total LOCs atm
+        // TODO: use this somehow
         function calculate_risk(package_id) {
             let package_risk = analysis_result[package_id];
             let risk_score = 0;
-            for (metric of ['transitive_dependencies', 'total_third_deps', 'root_importers', 'exclusive_deps_introduced', 'non_rust_loc', 'rust_loc', 'unsafe_loc', 'stargazers_count']) {
+            for (metric of ['transitive_dependencies', 'root_importers', 'exclusive_deps_introduced', 'non_rust_loc', 'rust_loc', 'unsafe_loc', 'stargazers_count']) {
                 let actual_number = package_risk[metric];
                 if (Array.isArray(actual_number)) {
                     actual_number = actual_number.length;
@@ -250,6 +245,7 @@
             return risk_score;
         }
 
+        // TODO: 
         function calculate_total_loc(package_id) {
 
         }
