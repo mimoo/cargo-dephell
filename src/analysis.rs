@@ -195,12 +195,14 @@ fn get_loc(package_risk: &mut PackageRisk, dependency_files: &HashSet<String>) {
 fn get_unsafe(package_risk: &mut PackageRisk, dependency_files: &HashSet<String>) {
   for dependency_file in dependency_files {
     let dependency_path = Path::new(dependency_file);
-    if dependency_path.extension() != Some(OsStr::new(".rs")) {
+    if dependency_path.extension() != Some(OsStr::new("rs")) {
       continue;
     }
 
     // TODO: is this the right way to count unsafe?
+    println!("find unsafe in {:?}", dependency_path);
     if let Ok(res) = geiger::find_unsafe_in_file(dependency_path, geiger::IncludeTests::No) {
+      println!("find unsafe res: {:?}", res);
       // update
       let mut unsafe_loc = res.counters.functions.unsafe_;
       unsafe_loc += res.counters.exprs.unsafe_;

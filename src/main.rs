@@ -108,7 +108,7 @@ fn main() {
 
     if !quiet {
         println!("{}", pretty_line);
-        println!("     ~~ CARGO DEPHELL ~~");
+        println!("   ~~ CARGO DEPHELL ~~");
         println!("{}", pretty_line);
     }
 
