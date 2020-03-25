@@ -472,12 +472,12 @@ pub fn analyze_repo(
     );
     package_risk.used = used;
 
-    if !quiet {
+    /*
       println!(
         "files for dependency {}: {:#?}",
         package_risk.name, dependency_files
       );
-    }
+    */
 
     // .non_rust_loc + .rust_loc
     get_loc(&mut package_risk, &dependency_files);
