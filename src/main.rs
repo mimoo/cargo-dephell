@@ -1,6 +1,3 @@
-// needed for rocket
-#![feature(proc_macro_hygiene, decl_macro)] // Nightly-only language features needed by Rocket
-
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
