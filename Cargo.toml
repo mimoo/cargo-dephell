@@ -8,6 +8,7 @@ description = "Analyzes a project's third-party dependencies."
 keywords = ["dependencies", "unsafe", "security", "loc", "cargo", "plugin"]
 repository = "https://github.com/mimoo/cargo-dephell"
 readme = "README.md"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 tempdir = "0.3.7" # to build the main crate
