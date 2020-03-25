@@ -7,6 +7,7 @@ categories = ["command-line-utilities", "development-tools", "development-tools:
 description = "Analyzes a project's third-party dependencies."
 keywords = ["dependencies", "unsafe", "security", "loc", "cargo", "plugin"]
 repository = "https://github.com/mimoo/cargo-dephell"
+readme = "https://github.com/mimoo/cargo-dephell/blob/master/README.md"
 
 [dependencies]
 tempdir = "0.3.7" # to build the main crate
