@@ -149,7 +149,11 @@
             For more information about the methodology check the <a href="https://github.com/mimoo/cargo-dephell">README</a>.
         </p>
         <nav>
-            
+            <div id="buttons">
+                <button id="target_feature">show unused dependencies</button>
+            </div>
+            <hr>
+            <div id="crumble"></div>
         </nav>
         <table>
             <thead>
@@ -271,7 +275,12 @@
 
         function display_package(package_id) {
             let package = analysis_result[package_id];
-            let html = "<tr>";
+            let html = "";
+            if (package.used) {
+                html += '<tr>';
+            } else {
+                html += '<tr class="not_used hide">';
+            }
             html += '<td><a href="'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
             html += "<td>" + package["transitive_dependencies"].length + "</td>";
             html += "<td>" + package["versions"].length + "</td>";
@@ -290,43 +299,60 @@
         }
 
         //
-        // nav functions
+        // buttons
+        // -------
+        //
+
+        // show/hide dependencies that are not part of our (target, features)
+        document.querySelector("#target_feature").addEventListener("click", (event) => {
+            if (event.target.innerHTML == "show unused dependencies") {
+                event.target.innerHTML = "hide unused dependencies";
+            } else {
+                event.target.innerHTML = "show unused dependencies";
+            }
+            document.querySelectorAll(".not_used").forEach(
+                (elem) => elem.classList.toggle("hide")
+            );
+        });
+
+        //
+        // crumble functions
         // -------------
         //
 
-        let nav_home = '<a href="#home" class="dep_nav"><i class="fas fa-home"></i> {{name}}</a>'; 
-        let nav_rest = [];
+        let crumble_home = '<a href="#home" class="dep_crumble"><i class="fas fa-home"></i> {{name}}</a>'; 
+        let crumble_rest = [];
 
-        function refresh_nav() {    
-            let nav = nav_home;
-            for (const [idx, dep_id] of nav_rest.entries()) {
+        function refresh_crumble() {    
+            let crumble = crumble_home;
+            for (const [idx, dep_id] of crumble_rest.entries()) {
                 let dep_name = analysis_result[dep_id]["name"];
-                nav += ' <i class="fas fa-caret-right"></i> <a href="#'+idx+'" class="dep_nav">' + dep_name + '</a>';
+                crumble += ' <i class="fas fa-caret-right"></i> <a href="#'+idx+'" class="dep_crumble">' + dep_name + '</a>';
             }
-            document.querySelector("nav").innerHTML = nav;
+            document.querySelector("#crumble").innerHTML = crumble;
         }
 
-        function nav_click(dep_id) {
-            nav_rest.push(dep_id);
-            refresh_nav();
+        function crumble_click(dep_id) {
+            crumble_rest.push(dep_id);
+            refresh_crumble();
         }
 
-        document.querySelector("nav").addEventListener("click", (event) => {
-            if (event.target && event.target.className != "dep_nav") {
+        document.querySelector("#crumble").addEventListener("click", (event) => {
+            if (event.target && event.target.className != "dep_crumble") {
                 return;
             }
             // which element in the array
             let idx = event.target.getAttribute("href").slice(1);
             if (idx == "home") {
-                nav_rest = [];
+                crumble_rest = [];
                 display_packages(main_dependencies);
             } else {
-                let package_id = nav_rest[idx];
-                nav_rest = nav_rest.slice(0, idx + 1);
+                let package_id = crumble_rest[idx];
+                crumble_rest = crumble_rest.slice(0, idx + 1);
                 display_packages(analysis_result[package_id]["transitive_dependencies"]);
             }
-            // refresh nav
-            refresh_nav();
+            // refresh crumble
+            refresh_crumble();
             //
             event.preventDefault();
         });
@@ -342,8 +368,8 @@
         let current_packages = main_dependencies;
         display_packages(main_dependencies);
 
-        // display nav
-        refresh_nav();
+        // display crumble
+        refresh_crumble();
 
         //
         // clicking on dependencies
@@ -359,7 +385,7 @@
             let package_id = event.target.getAttribute("href");
             // refresh
             reset_sort_icons();
-            nav_click(package_id);
+            crumble_click(package_id);
             display_packages(analysis_result[package_id]["transitive_dependencies"]);
             //
             event.preventDefault();

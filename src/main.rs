@@ -85,6 +85,11 @@ fn main() {
                 .value_name("CRATE_NAME")
                 .help("can be used multiple times to list workplace crates to ignore"),
         )
+        .arg(
+            Arg::with_name("quiet")
+                .short("q")
+                .help("suppress any output to stdout"),
+        )
         .get_matches();
 
     // get metadata from manifest path
@@ -98,10 +103,14 @@ fn main() {
         });
 
     // pretty hello world :>
+    let quiet = matches.is_present("quiet");
     let pretty_line = "=========================";
-    println!("{}", pretty_line);
-    println!("~~ CARGO DEPHELL ~~");
-    println!("{}", pretty_line);
+
+    if !quiet {
+        println!("{}", pretty_line);
+        println!("     ~~ CARGO DEPHELL ~~");
+        println!("{}", pretty_line);
+    }
 
     // parse github token (if given)
     let github_token = matches.value_of("github-token").and_then(|github_token| {
@@ -177,7 +186,9 @@ fn main() {
                 }
             };
             let _ = write!(&mut file, "{}", html_page.render().unwrap()).unwrap();
-            println!("html output saved at {}", html_output);
+            if !quiet {
+                println!("\n=> html output saved at {}", html_output);
+            }
         }
     };
     //
