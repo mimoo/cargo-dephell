@@ -53,7 +53,7 @@ pub struct PackageRisk {
   /// by this dependency, and only by this dependency
   pub exclusive_deps_introduced: Vec<PackageId>,
   /// number of non-rust lines-of-code
-  pub non_rust_loc: u64,
+  pub loc: u64,
   /// number of rust lines-of-code
   pub rust_loc: u64,
   /// number of lines of unsafe code
@@ -183,7 +183,7 @@ fn get_loc(package_risk: &mut PackageRisk, dependency_files: &HashSet<String>) {
     if lang != loc::Lang::Unrecognized {
       let count = loc::count(dependency_file);
       // update LOC
-      package_risk.non_rust_loc += u64::from(count.code);
+      package_risk.loc += u64::from(count.code);
       if lang == loc::Lang::Rust {
         package_risk.rust_loc += u64::from(count.code);
       }
@@ -479,7 +479,7 @@ pub fn analyze_repo(
       );
     */
 
-    // .non_rust_loc + .rust_loc
+    // .loc + .rust_loc
     get_loc(&mut package_risk, &dependency_files);
 
     // .unsafe_loc
