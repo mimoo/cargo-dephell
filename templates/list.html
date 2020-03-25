@@ -224,6 +224,7 @@
         // metric functions
         //
 
+        // TODO: use this somewhere
         weights = {
             'transitive_dependencies': 5,
             'root_importers': 1,
@@ -233,9 +234,6 @@
             'unsafe_loc': 1,
             'stargazers_count': 1
         };
-
-        // TODO: this doesn't use total LOCs atm
-        // TODO: use this somehow
         function calculate_risk(package_id) {
             let package_risk = analysis_result[package_id];
             let risk_score = 0;
@@ -249,9 +247,38 @@
             return risk_score;
         }
 
-        // TODO: 
+        // add total_non_rust_loc, total_rust_loc, total_unsafe_loc fields to each dependency
         function calculate_total_loc(package_id) {
-
+            console.log("calculate_total_loc of", package_id);
+            let total_non_rust_loc = 0;
+            let total_rust_loc = 0;
+            let total_unsafe_loc = 0;
+            // does it have any dependencies?
+            let transitive_dependencies = analysis_result[package_id]["transitive_dependencies"];
+            // no
+            if (transitive_dependencies.length == 0) {
+                analysis_result[package_id]["total_non_rust_loc"] = analysis_result[package_id]["non_rust_loc"];
+                analysis_result[package_id]["total_rust_loc"] = analysis_result[package_id]["rust_loc"];
+                analysis_result[package_id]["total_unsafe_loc"] = analysis_result[package_id]["unsafe_loc"];
+                return;
+            } 
+            // yes
+            for (transitive_dependency of transitive_dependencies) {
+                // already has the information we need or do we recurse?
+                if (!analysis_result[transitive_dependency].hasOwnProperty("total_rust_loc")) {
+                    calculate_total_loc(transitive_dependency);
+                }
+                // add up
+                total_non_rust_loc += analysis_result[transitive_dependency]["total_non_rust_loc"];
+                total_rust_loc += analysis_result[transitive_dependency]["total_rust_loc"];
+                total_unsafe_loc += analysis_result[transitive_dependency]["total_unsafe_loc"];
+            }
+            // update
+            console.log("result for", package_id);
+            console.log(total_non_rust_loc, total_rust_loc, total_unsafe_loc);
+            analysis_result[package_id]["total_non_rust_loc"] = total_non_rust_loc;
+            analysis_result[package_id]["total_rust_loc"] = total_rust_loc;
+            analysis_result[package_id]["total_unsafe_loc"] = total_unsafe_loc;
         }
 
         //
@@ -286,9 +313,9 @@
             html += "<td>" + package["versions"].length + "</td>";
             html += "<td>" + package["root_importers"].length + "</td>";
             html += "<td>" + package["exclusive_deps_introduced"].length + "</td>";
-            html += "<td>" + package["non_rust_loc"].toLocaleString() + "</td>";
-            html += "<td>" + package["rust_loc"].toLocaleString() + "</td>";
-            html += "<td>" + package["unsafe_loc"].toLocaleString() + "</td>";
+            html += "<td>" + package["total_non_rust_loc"].toLocaleString() + "</td>";
+            html += "<td>" + package["total_rust_loc"].toLocaleString() + "</td>";
+            html += "<td>" + package["total_unsafe_loc"].toLocaleString() + "</td>";
             if (package["repo"] != null) {
                 html += '<td><a href="'+package["repo"]+'">' + package["stargazers_count"].toLocaleString() + "</a></td>";
             } else {
@@ -363,6 +390,11 @@
 
         // obtain result and parse JSON
         let {main_dependencies, analysis_result} = JSON.parse('{{ json_result }}');
+
+        // calculate total LOCs:
+        for (dependency of main_dependencies) {
+            calculate_total_loc(dependency);
+        }
 
         // display main dependencies
         let current_packages = main_dependencies;

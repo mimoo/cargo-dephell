@@ -200,9 +200,7 @@ fn get_unsafe(package_risk: &mut PackageRisk, dependency_files: &HashSet<String>
     }
 
     // TODO: is this the right way to count unsafe?
-    println!("find unsafe in {:?}", dependency_path);
     if let Ok(res) = geiger::find_unsafe_in_file(dependency_path, geiger::IncludeTests::No) {
-      println!("find unsafe res: {:?}", res);
       // update
       let mut unsafe_loc = res.counters.functions.unsafe_;
       unsafe_loc += res.counters.exprs.unsafe_;
@@ -473,6 +471,13 @@ pub fn analyze_repo(
       &target_dir,
     );
     package_risk.used = used;
+
+    if !quiet {
+      println!(
+        "files for dependency {}: {:#?}",
+        package_risk.name, dependency_files
+      );
+    }
 
     // .non_rust_loc + .rust_loc
     get_loc(&mut package_risk, &dependency_files);
