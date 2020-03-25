@@ -1,7 +1,7 @@
 [package]
 name = "cargo-dephell"
 version = "0.1.0"
-authors = ["David Wong <davidwg@calibra.com>"]
+authors = ["David Wong <davidwong.crypto@gmail.com>"]
 edition = "2018"
 categories = ["command-line-utilities", "development-tools::cargo-plugins"]
 description = "Analyzes a project's third-party dependencies."
