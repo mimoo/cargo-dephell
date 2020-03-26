@@ -62,7 +62,6 @@ Keep in mind that this is a best-effort way to assess third party dependencies, 
 If you want to help:
 
 1. Check if the code on the given repository is the same as the code uploaded on crates.io
-1. Display the date of the last commit, or last version released, of a dependency.
 1. Add an `AUDIT.toml` file to track who has audited what SHA-1 commit of which repository.
 1. Display the dependency graph with dot (and d3).
 1. Add the number of committers in the last 12 months
