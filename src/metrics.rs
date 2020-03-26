@@ -1,6 +1,5 @@
 use guppy::graph::{DependencyDirection, PackageGraph, PackageMetadata};
 use guppy::PackageId;
-use regex::Regex;
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -14,9 +13,9 @@ use crate::analysis::PackageRisk;
 // ==================
 //
 
-/// GithubResponse is used to parse the response from github
+/// get number of stars a repo has
 pub fn get_github_stars(
-  github_client: reqwest::blocking::Client,
+  http_client: reqwest::blocking::Client,
   github_token: Option<(&str, &str)>,
   repo: &str,
 ) -> Option<u64> {
@@ -25,43 +24,105 @@ pub fn get_github_stars(
     #[serde(rename = "stargazers_count")]
     stargazers_count: u64,
   }
-  // is this a github repo?
-  let re = Regex::new(r"github\.com/([a-zA-Z0-9._-]*/[a-zA-Z0-9._-]*)").unwrap();
-  let caps = re.captures(repo);
-  caps
-    .and_then(|caps| caps.get(1))
-    // yes it is a github repo
-    .and_then(|repo| {
-      // create request to github API
-      let request_url = format!(
-        "https://api.github.com/repos/{}",
-        repo.as_str().trim_end_matches(".git")
-      );
-      let mut request = github_client.get(&request_url);
-      // if we have a github token, use it
-      if let Some((username, token)) = github_token {
-        request = request.basic_auth(username, Some(token));
+
+  // create request to github API
+  let request_url = format!(
+    "https://api.github.com/repos/{}",
+    repo.trim_end_matches(".git")
+  );
+  let mut request = http_client.get(&request_url);
+
+  // if we have a github token, use it
+  if let Some((username, token)) = github_token {
+    request = request.basic_auth(username, Some(token));
+  }
+  // send the request
+  let resp = match request.send() {
+    Err(err) => {
+      eprintln!("{}", err);
+      return None;
+    }
+    Ok(resp) => resp,
+  };
+
+  if !resp.status().is_success() {
+    eprintln!("dephell: github request failed");
+    eprintln!("status: {}", resp.status());
+    eprintln!("text: {:?}", resp.text());
+    return None;
+  }
+  let resp: reqwest::Result<GithubResponse> = resp.json();
+  match resp {
+    Ok(x) => Some(x.stargazers_count),
+    Err(err) => {
+      eprintln!("dephell: {}", err);
+      None
+    }
+  }
+}
+
+/// get number of maintainers in the last 6 months
+pub fn get_active_maintainers(
+  http_client: reqwest::blocking::Client,
+  github_token: Option<(&str, &str)>,
+  repo: &str,
+) -> Option<u64> {
+  #[derive(Deserialize, Debug)]
+  pub struct Author {
+    email: String,
+  }
+  #[derive(Deserialize, Debug)]
+  pub struct Commit {
+    author: Author,
+  }
+  #[derive(Deserialize, Debug)]
+  pub struct CommitInfo {
+    commit: Commit,
+  }
+  // create request to crates.io API
+  let six_months_ago = chrono::Utc::now()
+    .checked_sub_signed(chrono::Duration::weeks(4 * 6)) // 6 months
+    .unwrap()
+    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+  let request_url = format!(
+    "https://api.github.com/repos/{}/commits?since={}",
+    repo.trim_end_matches(".git"),
+    six_months_ago,
+  );
+  let mut request = http_client.get(&request_url);
+  // if we have a github token, use it
+  if let Some((username, token)) = github_token {
+    request = request.basic_auth(username, Some(token));
+  }
+  // send the request
+  let resp = match request.send() {
+    Err(err) => {
+      eprintln!("{}", err);
+      return None;
+    }
+    Ok(resp) => resp,
+  };
+  // parse response
+  if !resp.status().is_success() {
+    eprintln!("dephell: crates.io request failed");
+    eprintln!("status: {}", resp.status());
+    eprintln!("text: {:?}", resp.text());
+    return None;
+  }
+  let resp: reqwest::Result<Vec<CommitInfo>> = resp.json();
+  match resp {
+    Err(err) => {
+      eprintln!("dephell: {}", err);
+      None
+    }
+    Ok(commit_infos) => {
+      let mut commiters = HashSet::new();
+      for commit_info in commit_infos {
+        commiters.insert(commit_info.commit.author.email);
       }
-      // send the request and convert to option
-      //        eprintln!("dephell: sending request to {}", request_url);
-      request.send().ok()
-    })
-    .and_then(|resp| {
-      if !resp.status().is_success() {
-        eprintln!("dephell: github request failed");
-        eprintln!("status: {}", resp.status());
-        eprintln!("text: {:?}", resp.text());
-        return None;
-      }
-      let resp: reqwest::Result<GithubResponse> = resp.json();
-      match resp {
-        Ok(x) => Some(x.stargazers_count),
-        Err(err) => {
-          eprintln!("dephell: {}", err);
-          None
-        }
-      }
-    })
+      Some(commiters.len() as u64)
+    }
+  }
 }
 
 /// CratesIoResponse is used to parse the response from crates.io

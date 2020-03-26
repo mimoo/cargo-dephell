@@ -1,5 +1,6 @@
 use guppy::graph::{DependencyDirection, DependencyLink, PackageGraph};
 use guppy::{MetadataCommand, PackageId};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{
   hash_map::{Entry, HashMap},
@@ -63,6 +64,8 @@ pub struct PackageRisk {
   pub unsafe_loc: u64,
   /// number of github stars, if any
   pub stargazers_count: Option<u64>,
+  /// active contributors on github (in the last 6 months)
+  pub active_contributors: Option<u64>,
   /// number of dependent crates on crates.io
   pub crates_io_dependent: Option<u64>,
   /// last update according to crates.io
@@ -270,26 +273,29 @@ pub fn analyze_repo(
       &target_dir,
     );
     package_risk.used = used;
-
-    /*
-      println!(
-        "files for dependency {}: {:#?}",
-        package_risk.name, dependency_files
-      );
-    */
-
     // .loc + .rust_loc
     metrics::get_loc(&mut package_risk, &dependency_files);
 
     // .unsafe_loc
     metrics::get_unsafe(&mut package_risk, &dependency_files);
 
-    // .stargazers_count
-    // TODO: also retrieve latest SHA commit (of release)
-    // TODO: also compare it to the hash to the repo we have (this signals a big problem)
-    if let Some(repo) = &package_risk.repo {
-      let stars = metrics::get_github_stars(http_client.clone(), github_token, &repo);
-      package_risk.stargazers_count = stars;
+    // is this a github repo?
+    if let Some(repo_url) = &package_risk.repo {
+      let re = Regex::new(r"github\.com/([a-zA-Z0-9._-]*/[a-zA-Z0-9._-]*)").unwrap();
+      if let Some(repo_name) = re
+        .captures(repo_url)
+        .and_then(|caps| caps.get(1))
+        .map(|m| m.as_str())
+      {
+        // .stargazers_count
+        let stars = metrics::get_github_stars(http_client.clone(), github_token, &repo_name);
+        package_risk.stargazers_count = stars;
+
+        // .active_contributors
+        let active_contributors =
+          metrics::get_active_maintainers(http_client.clone(), github_token, &repo_name);
+        package_risk.active_contributors = active_contributors;
+      }
     }
 
     // .crates_io_dependent

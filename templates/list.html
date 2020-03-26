@@ -34,41 +34,25 @@
             padding:20px 0 20px;
         }
 
-        nav {
+        #crumble {
             font-size:15px;
         }
 
-        nav a {
+        #crumble a {
             text-decoration:none;
             color:black;
             display:inline-block;
-            padding:5px;
+            padding:5px 10px;
         }
 
-        nav a:last-child {
-            color: white;
-            background-color:lightslategrey;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: auto;
-        }
-
-        #jumbotron {
-            padding:10px;
-            background-color:cornsilk;
-        }
-
-        #jumbotron a {
-            color:black;
+        #crumble a:last-child {
+            background-color:#77889921;
         }
 
         #info {
             padding: 10px;
             margin-bottom: 10px;
-            color: #ffffffd6;
-            background-color: lightslategrey;
+            background-color: #77889921;
             font-size:13px;
         }
 
@@ -78,6 +62,21 @@
 
         #description {
             
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        #jumbotron {
+            padding:10px;
+            background-color:cornsilk;
+            margin-bottom:10px;
+        }
+
+        #jumbotron a {
+            color:black;
         }
 
         table {
@@ -135,6 +134,10 @@
         }
 
         /* button stuff taken from https://codepen.io/FelipeMarcos/pen/tfhEg */
+
+        #buttons {
+            margin-bottom:10px;
+        }
 
         button {
             cursor: pointer;
@@ -464,12 +467,9 @@
         </p>
         <nav>
             <div id="buttons">
-                <button id="target_feature" class="btn-gradient cyan mini">not showing unused dependencies</button>
-                <button id="total_loc" class="btn-gradient orange mini">showing lines of code for transitive dependencies</button>
-                <!-- TODO: add a "show information" button to display description, real list of importers, real list of exclusive deps introduced, etc. -->
+                <a href="#" id="target_feature" class="btn-gradient cyan mini">not showing unused dependencies</a>
+                <a href="#" id="total_loc" class="btn-gradient orange mini">showing lines of code for transitive dependencies</a>
             </div>
-            <!-- TODO: better hr -->
-            <hr>
             <!-- TODO: change URL with `crumble` when clicking -->
             <div id="crumble"></div>
         </nav>
@@ -527,13 +527,18 @@
                         </a>
                     </th>
                     <th>
+                        <a href="#active_contributors" data-tippy-content="number of contributors on the github repo in the last 6 months">
+                            active contributors
+                        </a>
+                    </th>
+                    <th>
                         <a href="#crates_io_dependent" data-tippy-content="number of published crates.io crates that depends on this crate">
                             crates.io dependents
                         </a>
                     </th>
-                    <th>
+                    <th width="100px">
                         <a href="#crates_io_last_updated" data-tippy-content="last time a version was published on crates.io">
-                            last update
+                            last updated
                         </a>
                     </th>
                 </tr>
@@ -566,13 +571,14 @@
             'rust_loc': 5,
             'unsafe_loc': 1,
             'stargazers_count': 1,
+            'active_contributors': 1,
             'crates_io_dependent': 1,
             'crates_io_last_updated': 1,
         };
         function calculate_risk(package_id) {
             let package_risk = analysis_result[package_id];
             let risk_score = 0;
-            for (metric of ['transitive_dependencies', 'root_importers', 'exclusive_deps_introduced', 'loc', 'rust_loc', 'unsafe_loc', 'stargazers_count', 'crates_io_dependent', 'crates_io_last_updated']) {
+            for (metric of ['transitive_dependencies', 'root_importers', 'exclusive_deps_introduced', 'loc', 'rust_loc', 'unsafe_loc', 'stargazers_count', 'active_contributors', 'crates_io_dependent', 'crates_io_last_updated']) {
                 let actual_number = package_risk[metric];
                 if (Array.isArray(actual_number)) {
                     actual_number = actual_number.length;
@@ -658,6 +664,11 @@
             } else {
                 html += "<td></td>";
             }
+            if (package["active_contributors"]) {
+                html += '<td><a href="'+package["repo"]+'">' + package["active_contributors"] + "</a></td>";
+            } else {
+                html += "<td></td>";
+            }
             if (package["crates_io_dependent"]) {
                 html += '<td>' + package["crates_io_dependent"].toLocaleString() + '</td>';
             } else {
@@ -691,6 +702,8 @@
             document.querySelectorAll(".not_used").forEach(
                 (elem) => elem.classList.toggle("hide")
             );
+            //
+            event.preventDefault();
         });
 
         // toggle LOC stuff
@@ -699,6 +712,8 @@
             document.querySelectorAll(".total, .not_total").forEach(
                 (elem) => elem.classList.toggle("hide")
             );
+            //
+            event.preventDefault();
         });
 
         //
