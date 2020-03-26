@@ -65,7 +65,7 @@ pub fn get_github_stars(
 }
 
 /// CratesIoResponse is used to parse the response from crates.io
-pub fn get_dependent_published_crates(
+pub fn get_crates_io_dependent(
   http_client: reqwest::blocking::Client,
   crate_name: &str,
 ) -> Option<u64> {
@@ -93,7 +93,7 @@ pub fn get_dependent_published_crates(
   };
   // parse response
   if !resp.status().is_success() {
-    eprintln!("dephell: github request failed");
+    eprintln!("dephell: crates.io request failed");
     eprintln!("status: {}", resp.status());
     eprintln!("text: {:?}", resp.text());
     return None;
@@ -105,6 +105,55 @@ pub fn get_dependent_published_crates(
       None
     }
     Ok(x) => Some(x.meta.total),
+  }
+}
+
+/// CratesIoResponse is used to parse the response from crates.io
+pub fn get_crates_io_last_updated(
+  http_client: reqwest::blocking::Client,
+  crate_name: &str,
+) -> Option<String> {
+  #[derive(Deserialize, Debug)]
+  struct Crate {
+    updated_at: String,
+  }
+  #[derive(Deserialize, Debug)]
+  pub struct Response {
+    #[serde(rename = "crate")]
+    crate_: Crate,
+  }
+  // create request to crates.io API
+  let request_url = format!("https://crates.io/api/v1/crates/{}", crate_name,);
+  let request = http_client.get(&request_url);
+  // send the request
+  let resp = match request.send() {
+    Err(err) => {
+      eprintln!("{}", err);
+      return None;
+    }
+    Ok(resp) => resp,
+  };
+  // parse response
+  if !resp.status().is_success() {
+    eprintln!("dephell: crates.io request failed");
+    eprintln!("status: {}", resp.status());
+    eprintln!("text: {:?}", resp.text());
+    return None;
+  }
+  let resp: reqwest::Result<Response> = resp.json();
+  match resp {
+    Err(err) => {
+      eprintln!("dephell: {}", err);
+      None
+    }
+    Ok(resp) => {
+      let updated_at = resp.crate_.updated_at;
+      let formatted_date = chrono::DateTime::parse_from_rfc3339(&updated_at)
+        .unwrap()
+        .format("%Y-%m-%d")
+        .to_string();
+      Some(formatted_date)
+    }
   }
 }
 

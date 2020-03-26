@@ -65,6 +65,8 @@ pub struct PackageRisk {
   pub stargazers_count: Option<u64>,
   /// number of dependent crates on crates.io
   pub crates_io_dependent: Option<u64>,
+  /// last update according to crates.io
+  pub crates_io_last_updated: Option<String>,
 }
 
 //
@@ -290,10 +292,15 @@ pub fn analyze_repo(
       package_risk.stargazers_count = stars;
     }
 
-    // .cratesio_dependent
+    // .crates_io_dependent
     let crates_io_dependent =
-      metrics::get_dependent_published_crates(http_client.clone(), &package_risk.name);
+      metrics::get_crates_io_dependent(http_client.clone(), &package_risk.name);
     package_risk.crates_io_dependent = crates_io_dependent;
+
+    // .crates_io_dependent
+    let crates_io_last_updated =
+      metrics::get_crates_io_last_updated(http_client.clone(), &package_risk.name);
+    package_risk.crates_io_last_updated = crates_io_last_updated;
   }
 
   // PackageId -> name

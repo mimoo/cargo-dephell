@@ -67,10 +67,15 @@
         #info {
             padding: 10px;
             margin-bottom: 10px;
-            color: white;
+            color: #ffffffd6;
             background-color: lightslategrey;
-            font-size:12px;
+            font-size:13px;
         }
+
+        #info div {
+            padding: 5px;
+        }
+
         #description {
             
         }
@@ -78,6 +83,7 @@
         table {
             border-collapse: collapse;
             width: 100%;
+            table-layout: fixed;
         }
 
         td {
@@ -109,11 +115,12 @@
         td {
             font-weight: 200;
             font-size: 15px;
-            text-align:center;
-            padding:0 5px;
+            text-align: right;
+            padding:0 10px;
+            border: 1px solid rgba(0,0,0,.04);
         }
         td:first-child {
-            text-align:center;
+            text-align:     center;
         }
 
         td a {
@@ -474,7 +481,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>
+                    <th width="150px">
                         <a href="#name" data-tippy-content="the name of the dependency">
                             name
                         </a>
@@ -524,6 +531,11 @@
                             crates.io dependents
                         </a>
                     </th>
+                    <th>
+                        <a href="#crates_io_last_updated" data-tippy-content="last time a version was published on crates.io">
+                            last update
+                        </a>
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -555,11 +567,12 @@
             'unsafe_loc': 1,
             'stargazers_count': 1,
             'crates_io_dependent': 1,
+            'crates_io_last_updated': 1,
         };
         function calculate_risk(package_id) {
             let package_risk = analysis_result[package_id];
             let risk_score = 0;
-            for (metric of ['transitive_dependencies', 'root_importers', 'exclusive_deps_introduced', 'loc', 'rust_loc', 'unsafe_loc', 'stargazers_count', 'crates_io_dependent']) {
+            for (metric of ['transitive_dependencies', 'root_importers', 'exclusive_deps_introduced', 'loc', 'rust_loc', 'unsafe_loc', 'stargazers_count', 'crates_io_dependent', 'crates_io_last_updated']) {
                 let actual_number = package_risk[metric];
                 if (Array.isArray(actual_number)) {
                     actual_number = actual_number.length;
@@ -633,20 +646,25 @@
             html += "<td>" + package["root_importers"].length + "</td>";
             html += "<td>" + package["exclusive_deps_introduced"].length + "</td>";
 
-            html += '<td class="total hide">' + package["total_loc"].toLocaleString() + "</td>";
-            html += '<td class="total hide">' + package["total_rust_loc"].toLocaleString() + "</td>";
-            html += '<td class="total hide">' + package["total_unsafe_loc"].toLocaleString() + "</td>";
+            html += '<td class="total">' + package["total_loc"].toLocaleString() + "</td>";
+            html += '<td class="total">' + package["total_rust_loc"].toLocaleString() + "</td>";
+            html += '<td class="total">' + package["total_unsafe_loc"].toLocaleString() + "</td>";
 
-            html += '<td class="not_total">' + package["loc"].toLocaleString() + "</td>";
-            html += '<td class="not_total">' + package["rust_loc"].toLocaleString() + "</td>";
-            html += '<td class="not_total">' + package["unsafe_loc"].toLocaleString() + "</td>";
+            html += '<td class="not_total hide">' + package["loc"].toLocaleString() + "</td>";
+            html += '<td class="not_total hide">' + package["rust_loc"].toLocaleString() + "</td>";
+            html += '<td class="not_total hide">' + package["unsafe_loc"].toLocaleString() + "</td>";
             if (package["stargazers_count"]) {
                 html += '<td><a href="'+package["repo"]+'">' + package["stargazers_count"].toLocaleString() + "</a></td>";
             } else {
                 html += "<td></td>";
             }
             if (package["crates_io_dependent"]) {
-                html += '<td><a href="https://crates.io/crates/'+ package["name"] +'">' + package["crates_io_dependent"].toLocaleString() + '</a></td>';
+                html += '<td>' + package["crates_io_dependent"].toLocaleString() + '</td>';
+            } else {
+                html += "<td></td>";
+            }
+            if (package["crates_io_last_updated"]) {
+                html += '<td><a href="https://crates.io/crates/'+ package["name"] +'">' + package["crates_io_last_updated"] + '</a></td>';
             } else {
                 html += "<td></td>";
             }
