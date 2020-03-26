@@ -39,13 +39,13 @@ Once there, just:
 once you have it, pass it as:
 
 ```
-cargo run -- --manifest-path ./Cargo.toml -o analysis_results.html -g <username>:<token>
+cargo run -- --manifest-path ./Cargo.toml -o analysis_results.html --github-token <username>:<token>
 ```
 
 so for example:
 
 ```
-cargo run -- --manifest-path ./Cargo.toml -o analysis_results.html -g mimoo:3902jfoiewjf130fjeowijfw
+cargo run -- --manifest-path ./Cargo.toml -o analysis_results.html --github-token mimoo:3902jfoiewjf130fjeowijfw
 ```
 
 ## Limitations
@@ -61,10 +61,11 @@ Keep in mind that this is a best-effort way to assess third party dependencies, 
 
 If you want to help:
 
-1. Make `cargo dephell` work.
-1. Add the number of new transitive dependencies added by a dependency. (so that we can say stuff like "without dependency X we could get rid of Y dependencies").
 1. Check if the code on the given repository is the same as the code uploaded on crates.io
 1. Display the date of the last commit, or last version released, of a dependency.
 1. Add an `AUDIT.toml` file to track who has audited what SHA-1 commit of which repository.
 1. Add feature-sensisite support (blocked on guppy at the moment). Furthermore it would be great if we can dynamically enable and disable features in the HTML output.
 1. Display the dependency graph with dot (and d3).
+1. Add the number of committers in the last 12 months
+1. Add number of importers from crates.io
+1. Add audits of crates (from https://github.com/RustSec/cargo-audit/blob/master/src/auditor.rs#L4)

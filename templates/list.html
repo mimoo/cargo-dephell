@@ -21,6 +21,7 @@
 
         body {
             margin:0;
+            margin-bottom:50px;
         }
 
         header {
@@ -34,12 +35,19 @@
         }
 
         nav {
-            margin-bottom:10px;
+            font-size:15px;
         }
 
         nav a {
             text-decoration:none;
             color:black;
+            display:inline-block;
+            padding:5px;
+        }
+
+        nav a:last-child {
+            color: white;
+            background-color:lightslategrey;
         }
 
         .container {
@@ -54,6 +62,17 @@
 
         #jumbotron a {
             color:black;
+        }
+
+        #info {
+            padding: 10px;
+            margin-bottom: 10px;
+            color: white;
+            background-color: lightslategrey;
+            font-size:12px;
+        }
+        #description {
+            
         }
 
         table {
@@ -431,63 +450,78 @@
     </header>
     <div class="container">
         <p id="jumbotron">
-            This page was generated with <a href="https://github.com/mimoo/cargo-dephell">cargo dephell</a>. It lists the dependencies used by <strong>{{ name }}</strong>.<br>
+            
+            This page was generated with <a href="https://github.com/mimoo/cargo-dephell">cargo dephell</a>. It lists the dependencies used by <strong>{{name}}</strong>.<br>
+            The crates used in the analysis are: <span id="root_crates"></span>.<br>
             For more information about the methodology check the <a href="https://github.com/mimoo/cargo-dephell">README</a>.
         </p>
         <nav>
             <div id="buttons">
                 <button id="target_feature" class="btn-gradient cyan mini">not showing unused dependencies</button>
                 <button id="total_loc" class="btn-gradient orange mini">showing lines of code for transitive dependencies</button>
+                <!-- TODO: add a "show information" button to display description, real list of importers, real list of exclusive deps introduced, etc. -->
             </div>
+            <!-- TODO: better hr -->
             <hr>
+            <!-- TODO: change URL with `crumble` when clicking -->
             <div id="crumble"></div>
         </nav>
+        <div id="info">
+            <div id="description"></div>
+            <div id="root_importers"></div>
+            <div id="exclusive_deps_introduced"></div>
+        </div>
         <table>
             <thead>
                 <tr>
                     <th>
                         <a href="#name" data-tippy-content="the name of the dependency">
-                            crate name
+                            name
                         </a>
                     </th>
                     <th>
                         <a href="#transitive_dependencies" data-tippy-content="the number of dependencies that this package end up adding (if all features are set) not including this package">
-                            transitive dependencies
+                            transitive deps
                         </a>
                     </th>
                     <th>
                         <a href="#versions" data-tippy-content="the number of different versions of this dependency that are imported in the workspace">
-                            versions imported
+                            versions
                         </a>
                     </th>
                     <th>
                         <a href="#root_importers" data-tippy-content="the number of workspace crates that have this dependency as transitive dependency">
-                            imported by
+                            root importers
                         </a>
                     </th>
                     <th>
                         <a href="#exclusive_deps_introduced" data-tippy-content="the number of dependencies that are introduced only by having this dependency">
-                            exclusive dependencies introduced
+                            new deps
                         </a>
                     </th>
                     <th>
                         <a href="#loc" data-tippy-content="total lines of code for anything (not just rust) that might end up being imported by having this dependency (this includes transitive dependencies)">
-                            lines of code
+                            loc
                         </a>
                     </th>
                     <th>
                         <a href="#rust_loc" data-tippy-content="total lines of rust code for this dependency and its transitive dependencies">
-                            lines of rust code
+                            rust loc
                         </a>
                     </th>
                     <th>
                         <a href="#unsafe_loc" data-tippy-content="total lines of unsafe rust code for this dependency and its transitive dependencies">
-                            unsafe lines of code
+                            unsafe loc
                         </a>
                     </th>
                     <th>
                         <a href="#stargazers_count" data-tippy-content="number of github stars (only if the dependency has a github repository)">
                             github stars
+                        </a>
+                    </th>
+                    <th>
+                        <a href="#crates_io_dependent" data-tippy-content="number of published crates.io crates that depends on this crate">
+                            crates.io dependents
                         </a>
                     </th>
                 </tr>
@@ -519,12 +553,13 @@
             'loc': 1,
             'rust_loc': 5,
             'unsafe_loc': 1,
-            'stargazers_count': 1
+            'stargazers_count': 1,
+            'crates_io_dependent': 1,
         };
         function calculate_risk(package_id) {
             let package_risk = analysis_result[package_id];
             let risk_score = 0;
-            for (metric of ['transitive_dependencies', 'root_importers', 'exclusive_deps_introduced', 'loc', 'rust_loc', 'unsafe_loc', 'stargazers_count']) {
+            for (metric of ['transitive_dependencies', 'root_importers', 'exclusive_deps_introduced', 'loc', 'rust_loc', 'unsafe_loc', 'stargazers_count', 'crates_io_dependent']) {
                 let actual_number = package_risk[metric];
                 if (Array.isArray(actual_number)) {
                     actual_number = actual_number.length;
@@ -536,7 +571,6 @@
 
         // add total_loc, total_rust_loc, total_unsafe_loc fields to each dependency
         function calculate_total_loc(package_id) {
-            console.log("calculate_total_loc of", package_id);
             let total_loc = 0;
             let total_rust_loc = 0;
             let total_unsafe_loc = 0;
@@ -561,8 +595,6 @@
                 total_unsafe_loc += analysis_result[transitive_dependency]["total_unsafe_loc"];
             }
             // update
-            console.log("result for", package_id);
-            console.log(total_loc, total_rust_loc, total_unsafe_loc);
             analysis_result[package_id]["total_loc"] = total_loc;
             analysis_result[package_id]["total_rust_loc"] = total_rust_loc;
             analysis_result[package_id]["total_unsafe_loc"] = total_unsafe_loc;
@@ -595,7 +627,7 @@
             } else {
                 html += '<tr class="not_used hide">';
             }
-            html += '<td><a href="'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
+            html += '<td><a href="#'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
             html += "<td>" + package["transitive_dependencies"].length + "</td>";
             html += "<td>" + package["versions"].length + "</td>";
             html += "<td>" + package["root_importers"].length + "</td>";
@@ -608,10 +640,15 @@
             html += '<td class="not_total">' + package["loc"].toLocaleString() + "</td>";
             html += '<td class="not_total">' + package["rust_loc"].toLocaleString() + "</td>";
             html += '<td class="not_total">' + package["unsafe_loc"].toLocaleString() + "</td>";
-            if (package["repo"] != null) {
+            if (package["stargazers_count"]) {
                 html += '<td><a href="'+package["repo"]+'">' + package["stargazers_count"].toLocaleString() + "</a></td>";
             } else {
-                html += "<td>" + package["stargazers_count"].toLocaleString() + "</td>";
+                html += "<td></td>";
+            }
+            if (package["crates_io_dependent"]) {
+                html += '<td><a href="https://crates.io/crates/'+ package["name"] +'">' + package["crates_io_dependent"].toLocaleString() + '</a></td>';
+            } else {
+                html += "<td></td>";
             }
             html += "</tr>"
             document.querySelector("tbody").innerHTML += html;
@@ -676,6 +713,7 @@
             let idx = event.target.getAttribute("href").slice(1);
             if (idx == "home") {
                 crumble_rest = [];
+                reset_info();
                 display_packages(main_dependencies);
             } else {
                 let package_id = crumble_rest[idx];
@@ -693,12 +731,16 @@
         // ----
 
         // obtain result and parse JSON
-        let {main_dependencies, analysis_result} = JSON.parse('{{ json_result }}');
+        let {root_crates, main_dependencies, analysis_result} = JSON.parse(atob("{{ json_result }}"));
 
         // calculate total LOCs:
         for (dependency of main_dependencies) {
             calculate_total_loc(dependency);
         }
+
+        // display jumbotron
+        let root_crates_with_comma = root_crates.reduce( (acc, pkg_name) => acc + ", " + pkg_name);
+        document.querySelector("#root_crates").innerHTML = root_crates_with_comma;
 
         // display main dependencies
         let current_packages = main_dependencies;
@@ -711,6 +753,39 @@
         // clicking on dependencies
         // ------------------------
 
+        // TODO: remove this once we move from packageid to name
+        function package_id_to_name(package_id) {
+            return package_id.split(" ")[0];
+        }
+
+        function update_info(package_info) {
+            if (package_info["description"]) {
+                document.querySelector("#description").innerHTML = "<strong>description:</strong> " + package_info["description"];
+            }
+            if (package_info["root_importers"].length > 0) {
+                let root_importers = "";
+                package_info["root_importers"].forEach( (pkg_id) => {
+                    root_importers += ", " + package_id_to_name(pkg_id);
+                });
+                console.log(root_importers);
+                document.querySelector("#root_importers").innerHTML = "<strong>importers:</strong> " + root_importers.slice(2);
+                
+            }
+            if (package_info["exclusive_deps_introduced"].length > 0) {
+                let exclusive_deps_introduced = "";
+                package_info["exclusive_deps_introduced"].forEach( (pkg_id) => {
+                    return exclusive_deps_introduced += ", " + package_id_to_name(pkg_id);
+                });
+                document.querySelector("#exclusive_deps_introduced").innerHTML = "<strong>exclusive dependencies introduced</strong>: " + exclusive_deps_introduced.slice(2);
+            }
+        }
+
+        function reset_info() {
+            document.querySelector("#description").innerHTML = "";
+            document.querySelector("#root_importers").innerHTML = "";
+            document.querySelector("#exclusive_deps_introduced").innerHTML = "";
+        }
+
         // clicking on a dependency gives us a view of a specific dependency
         document.querySelector("tbody").addEventListener("click", (event) => {
             if (event.target && event.target.className != "dep_name") {
@@ -718,11 +793,15 @@
             }
             // get info
             let package_name = event.target.innerHTML;
-            let package_id = event.target.getAttribute("href");
+            let package_id = event.target.getAttribute("href").slice(1);
             // refresh
             reset_sort_icons();
             crumble_click(package_id);
-            display_packages(analysis_result[package_id]["transitive_dependencies"]);
+            // display info about the dependency
+            let package_info = analysis_result[package_id];
+            update_info(package_info)
+            // display new packages
+            display_packages(package_info["transitive_dependencies"]);
             //
             event.preventDefault();
         });

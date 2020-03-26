@@ -7,6 +7,7 @@ use guppy::PackageId;
 use serde::{Deserialize, Serialize};
 
 mod analysis;
+mod metrics;
 
 //
 // HTML Stuff
@@ -28,6 +29,7 @@ struct HtmlList {
 
 #[derive(Serialize, Deserialize)]
 struct JsonResult {
+    root_crates: HashSet<String>,
     main_dependencies: HashSet<PackageId>,
     analysis_result: HashMap<PackageId, analysis::PackageRisk>,
 }
@@ -52,6 +54,14 @@ fn main() {
                 .value_name("PATH"),
         )
         .arg(
+            Arg::with_name("package")
+                .short("p")
+                .multiple(true)
+                .takes_value(true)
+                .value_name("PACKAGE")
+                .help("can be used to specify exactly which packages in a workspace to use"),
+        )
+        .arg(
             Arg::with_name("html-output")
                 .help("prints the output as HTML (default JSON)")
                 .short("o")
@@ -60,7 +70,6 @@ fn main() {
         )
         .arg(
             Arg::with_name("github-token")
-                .short("g")
                 .long("github-token")
                 .takes_value(true)
                 .value_name("USER:TOKEN")
@@ -68,7 +77,6 @@ fn main() {
         )
         .arg(
             Arg::with_name("proxy")
-                .short("p")
                 .long("proxy")
                 .takes_value(true)
                 .value_name("PROTOCOL://IP:PORT")
@@ -80,6 +88,7 @@ fn main() {
                 .multiple(true)
                 .takes_value(true)
                 .value_name("CRATE_NAME")
+                .conflicts_with("package")
                 .help("can be used multiple times to list workplace crates to ignore"),
         )
         .arg(
@@ -106,7 +115,7 @@ fn main() {
     if !quiet {
         println!("{}", pretty_line);
         println!("   ~~ CARGO DEPHELL ~~");
-        println!("{}", pretty_line);
+        println!("{}\n", pretty_line);
     }
 
     // parse github token (if given)
@@ -138,9 +147,20 @@ fn main() {
     // parse dependencies to ignore
     let to_ignore = matches.values_of("ignore-workspace");
     let to_ignore: Option<Vec<&str>> = to_ignore.map(|x| x.collect());
+
+    // parse packages to use
+    let packages = matches.values_of("package");
+    let packages: Option<Vec<&str>> = packages.map(|x| x.collect());
+
     // do the analysis
-    let result = analysis::analyze_repo(&manifest_path, http_client, github_token, to_ignore);
-    let (main_dependencies, analysis_result) = match result {
+    let result = analysis::analyze_repo(
+        &manifest_path,
+        http_client,
+        github_token,
+        packages,
+        to_ignore,
+    );
+    let (root_crates, main_dependencies, analysis_result) = match result {
         Err(err) => {
             eprintln!("{}", err);
             return;
@@ -150,6 +170,7 @@ fn main() {
 
     // convert result to JSON
     let json_result = JsonResult {
+        root_crates,
         main_dependencies,
         analysis_result,
     };
@@ -173,7 +194,7 @@ fn main() {
                 .to_owned();
             let html_page = HtmlList {
                 name: name,
-                json_result: json_result,
+                json_result: base64::encode(json_result),
             };
             let mut file = match File::create(html_output) {
                 Ok(x) => x,
