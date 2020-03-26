@@ -470,7 +470,7 @@
                 <a href="#" id="target_feature" class="btn-gradient cyan mini">not showing unused dependencies</a>
                 <a href="#" id="total_loc" class="btn-gradient orange mini">showing lines of code for transitive dependencies</a>
             </div>
-            <!-- TODO: change URL with `crumble` when clicking -->
+            <!-- TODO: change URL with `crumble` when clicking + keep what's sorted in memory -->
             <div id="crumble"></div>
         </nav>
         <div id="info">
@@ -484,62 +484,77 @@
                     <th width="150px">
                         <a href="#name" data-tippy-content="the name of the dependency">
                             name
-                        </a>
+                        </a><br>
                     </th>
                     <th>
                         <a href="#transitive_dependencies" data-tippy-content="the number of dependencies that this package end up adding (if all features are set) not including this package">
                             transitive deps
-                        </a>
+                        </a><br>
                     </th>
                     <th>
                         <a href="#versions" data-tippy-content="the number of different versions of this dependency that are imported in the workspace">
                             versions
-                        </a>
+                        </a><br>
                     </th>
                     <th>
                         <a href="#root_importers" data-tippy-content="the number of workspace crates that have this dependency as transitive dependency">
                             root importers
-                        </a>
+                        </a><br>
                     </th>
                     <th>
                         <a href="#exclusive_deps_introduced" data-tippy-content="the number of dependencies that are introduced only by having this dependency">
                             new deps
-                        </a>
+                        </a><br>
                     </th>
-                    <th>
+                    <th class="total">
                         <a href="#loc" data-tippy-content="total lines of code for anything (not just rust) that might end up being imported by having this dependency (this includes transitive dependencies)">
                             loc
-                        </a>
+                        </a><br>
                     </th>
-                    <th>
-                        <a href="#rust_loc" data-tippy-content="total lines of rust code for this dependency and its transitive dependencies">
+                    <th class="total">
+                        <a href="#tota_rust_loc" data-tippy-content="total lines of rust code for this dependency and its transitive dependencies">
                             rust loc
-                        </a>
+                        </a><br>
                     </th>
-                    <th>
-                        <a href="#unsafe_loc" data-tippy-content="total lines of unsafe rust code for this dependency and its transitive dependencies">
+                    <th class="total">
+                        <a href="#total_unsafe_loc" data-tippy-content="total lines of unsafe rust code for this dependency and its transitive dependencies">
                             unsafe loc
-                        </a>
+                        </a><br>
+                    </th>
+                    <th class="not_total hide">
+                        <a href="#loc" data-tippy-content="lines of code for anything (not just rust) for this dependency">
+                            loc
+                        </a><br>
+                    </th>
+                    <th class="not_total hide">
+                        <a href="#rust_loc" data-tippy-content="lines of rust code for this dependency">
+                            rust loc
+                        </a><br>
+                    </th>
+                    <th class="not_total hide">
+                        <a href="#unsafe_loc" data-tippy-content="lines of unsafe rust code for this dependency">
+                            unsafe loc
+                        </a><br>
                     </th>
                     <th>
                         <a href="#stargazers_count" data-tippy-content="number of github stars (only if the dependency has a github repository)">
                             github stars
-                        </a>
+                        </a><br>
                     </th>
                     <th>
                         <a href="#active_contributors" data-tippy-content="number of contributors on the github repo in the last 6 months">
                             active contributors
-                        </a>
+                        </a><br>
                     </th>
                     <th>
                         <a href="#crates_io_dependent" data-tippy-content="number of published crates.io crates that depends on this crate">
                             crates.io dependents
-                        </a>
+                        </a><br>
                     </th>
                     <th width="100px">
                         <a href="#crates_io_last_updated" data-tippy-content="last time a version was published on crates.io">
                             last updated
-                        </a>
+                        </a><br>
                     </th>
                 </tr>
             </thead>
@@ -556,7 +571,6 @@
     <!-- custom -->
     <script>
         // TODO: https://github.com/magjac/d3-graphviz for dot
-        // TODO: compute total_LOC here
 
         //
         // metric functions
@@ -659,26 +673,31 @@
             html += '<td class="not_total hide">' + package["loc"].toLocaleString() + "</td>";
             html += '<td class="not_total hide">' + package["rust_loc"].toLocaleString() + "</td>";
             html += '<td class="not_total hide">' + package["unsafe_loc"].toLocaleString() + "</td>";
+
             if (package["stargazers_count"]) {
                 html += '<td><a href="'+package["repo"]+'">' + package["stargazers_count"].toLocaleString() + "</a></td>";
             } else {
                 html += "<td></td>";
             }
+
             if (package["active_contributors"]) {
                 html += '<td><a href="'+package["repo"]+'">' + package["active_contributors"] + "</a></td>";
             } else {
                 html += "<td></td>";
             }
+
             if (package["crates_io_dependent"]) {
                 html += '<td>' + package["crates_io_dependent"].toLocaleString() + '</td>';
             } else {
                 html += "<td></td>";
             }
+
             if (package["crates_io_last_updated"]) {
                 html += '<td><a href="https://crates.io/crates/'+ package["name"] +'">' + package["crates_io_last_updated"] + '</a></td>';
             } else {
                 html += "<td></td>";
             }
+
             html += "</tr>"
             document.querySelector("tbody").innerHTML += html;
         }

@@ -383,7 +383,7 @@ pub fn get_dependency_files(
     }
     // this dependency is not part of our target+features: let's do it the old fashion way
     None => {
-      eprintln!("dephell: no dep-info file found for {}", package_name);
+      // eprintln!("dephell: no dep-info file found for {}", package_name);
       let package_path = manifest_path.parent().unwrap();
       let dependency_files = get_every_file_in_folder(package_path);
       (false, dependency_files)
