@@ -467,8 +467,9 @@
         </p>
         <nav>
             <div id="buttons">
-                <a href="#" id="target_feature" class="btn-gradient cyan mini">not showing unused dependencies</a>
-                <a href="#" id="total_loc" class="btn-gradient orange mini">showing lines of code for transitive dependencies</a>
+                <a href="#" id="btn_target_feature" class="btn-gradient cyan mini">not showing unused dependencies</a>
+                <a href="#" id="btn_total_loc" class="btn-gradient orange mini">showing lines of code for transitive dependencies</a>
+                <a href="#" id="btn_transitive_deps" class="btn-gradient yellow mini">not showing transitive dependencies</a>
             </div>
             <!-- TODO: change URL with `crumble` when clicking + keep what's sorted in memory -->
             <div id="crumble"></div>
@@ -641,13 +642,11 @@
             document.querySelector("tbody").innerHTML = "";
         }
 
-        function display_packages(package_ids) {
+        function refresh_displayed_packages() {
             // clean
             clean_table();
-            // update state
-            current_packages = package_ids;
             // display
-            for(package_id of package_ids) {
+            for(package_id of current_packages) {
                 display_package(package_id);
             }
         }
@@ -716,7 +715,7 @@
         }
 
         // show/hide dependencies that are not part of our (target, features)
-        document.querySelector("#target_feature").addEventListener("click", (event) => {
+        document.querySelector("#btn_target_feature").addEventListener("click", (event) => {
             toggle_not(event.target);
             document.querySelectorAll(".not_used").forEach(
                 (elem) => elem.classList.toggle("hide")
@@ -725,12 +724,45 @@
             event.preventDefault();
         });
 
-        // toggle LOC stuff
-        document.querySelector("#total_loc").addEventListener("click", (event) => {
+        // toggle "total" LOC 
+        document.querySelector("#btn_total_loc").addEventListener("click", (event) => {
             toggle_not(event.target);
             document.querySelectorAll(".total, .not_total").forEach(
                 (elem) => elem.classList.toggle("hide")
             );
+            //
+            event.preventDefault();
+        });
+
+        // toggle direct/transitive deps
+        let transitive = false;
+        document.querySelector("#btn_transitive_deps").addEventListener("click", (event) => {
+            toggle_not(event.target);
+            // reset sorting
+            reset_sort_icons();
+            // TODO: caca
+            // obtain current package_id via crumble
+            if (crumble_rest.length == 0) { // main deps
+                if (!transitive) { // direct -> transitive
+                    current_packages = [];
+                    Object.keys(analysis_result).forEach( (pkg_id) => {
+                        current_packages.push(pkg_id)
+                    });
+                } else { // transitive -> direct
+                    current_packages = main_dependencies;
+                }
+            } else { // pkg_id
+                let pkg_id = crumble_rest[crumble_rest.length - 1];
+                if (!transitive) { // direct -> transitive
+                    current_packages = analysis_result[pkg_id]["transitive_dependencies"];
+                } else { // transitive -> direct
+                    current_packages = analysis_result[pkg_id]["direct_dependencies"];
+                }
+            }
+            // invert the global
+            transitive = !transitive;
+            // display new packages
+            refresh_displayed_packages();
             //
             event.preventDefault();
         });
@@ -766,12 +798,24 @@
             if (idx == "home") {
                 crumble_rest = [];
                 reset_info();
-                display_packages(main_dependencies);
+                if (transitive) {
+                    current_packages = [];
+                    Object.keys(analysis_result).forEach( (pkg_id) => {
+                        current_packages.push(pkg_id)
+                    });
+                } else {
+                    current_packages = main_dependencies;
+                }
             } else {
                 let package_id = crumble_rest[idx];
                 crumble_rest = crumble_rest.slice(0, idx + 1);
-                display_packages(analysis_result[package_id]["transitive_dependencies"]);
+                if (transitive) {
+                    current_packages = analysis_result[package_id]["transitive_dependencies"];
+                } else {
+                    current_packages = analysis_result[package_id]["direct_dependencies"];
+                }
             }
+            refresh_displayed_packages();
             // refresh crumble
             refresh_crumble();
             //
@@ -796,7 +840,7 @@
 
         // display main dependencies
         let current_packages = main_dependencies;
-        display_packages(main_dependencies);
+        refresh_displayed_packages();
 
         // display crumble
         refresh_crumble();
@@ -844,7 +888,7 @@
                 return;
             }
             // get info
-            let package_name = event.target.innerHTML;
+            let package_name = event.target.innerHTML; // necessary for main deps
             let package_id = event.target.getAttribute("href").slice(1);
             // refresh
             reset_sort_icons();
@@ -853,7 +897,12 @@
             let package_info = analysis_result[package_id];
             update_info(package_info)
             // display new packages
-            display_packages(package_info["transitive_dependencies"]);
+            if (transitive) {
+                current_packages = package_info["transitive_dependencies"];
+            } else {
+                current_packages = package_info["direct_dependencies"];
+            }
+            refresh_displayed_packages();
             //
             event.preventDefault();
         });
@@ -907,7 +956,7 @@
                 });
             }
             // refresh table
-            display_packages(current_packages);
+            refresh_displayed_packages();
             //
             event.preventDefault();
         }

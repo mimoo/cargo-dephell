@@ -48,7 +48,9 @@ pub struct PackageRisk {
 
   /// is this dependency used for the host target and features?
   pub used: bool,
-  // TODO: skip any PackageId with serde, and have <String> for HTML
+  // TODO: convert all of these packageId to name
+  /// direct dependencies
+  pub direct_dependencies: HashSet<PackageId>,
   /// transitive dependencies (not including this dependency)
   pub transitive_dependencies: HashSet<PackageId>,
   /// number of root crates that import this package
@@ -174,6 +176,7 @@ pub fn analyze_repo(
       })
       .collect();
   }
+  // TODO: this doesn't catch the -sys crate in https://github.com/rust-rocksdb/rust-rocksdb
 
   if root_crates_to_analyze.len() == 0 {
     return Err("dephell: no package to analyze was found".to_string());
@@ -248,12 +251,19 @@ pub fn analyze_repo(
   //
 
   for (package_id, mut package_risk) in analysis_result.iter_mut() {
+    // .direct_dependencies
+    package_risk.direct_dependencies = package_graph
+      .dep_links(package_id)
+      .unwrap()
+      .map(|dep_link| dep_link.to.id().clone())
+      .collect();
+
     // .transitive_dependencies
     package_risk.transitive_dependencies = package_graph
       .select_forward(std::iter::once(package_id))
       .unwrap()
       .into_iter_links(Some(DependencyDirection::Reverse))
-      .map(|package_id| package_id.to.id().clone())
+      .map(|dep_link| dep_link.to.id().clone())
       .collect();
 
     // .root_importers
