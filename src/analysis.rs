@@ -46,8 +46,11 @@ pub struct PackageRisk {
   // analysis result
   // ---------------
 
+  /// is this an internal package?
+  pub internal: bool,
   /// is this dependency used for the host target and features?
   pub used: bool,
+  
   // TODO: convert all of these packageId to name
   /// direct dependencies
   pub direct_dependencies: HashSet<PackageId>,
@@ -99,6 +102,7 @@ fn create_or_update_dependency(
       package_risk.repo = dep_link.to.repository().map(|x| x.to_owned());
       package_risk.description = dep_link.to.description().map(|x| x.to_owned());
       package_risk.manifest_path = dep_link.to.manifest_path().to_path_buf();
+      package_risk.internal = dep_link.to.in_workspace();
       entry.insert(package_risk);
     }
   };
@@ -198,10 +202,6 @@ pub fn analyze_repo(
       if dep_link.edge.dev_only() {
         continue;
       }
-      // ignore root crates (when used as dependency)
-      if root_crates.contains(dep_link.to.id()) {
-        continue;
-      }
       main_dependencies.insert(dep_link.to.id().to_owned());
       create_or_update_dependency(&mut analysis_result, &dep_link);
     }
@@ -216,10 +216,6 @@ pub fn analyze_repo(
   for dep_link in transitive_dependencies {
     // ignore dev dependencies
     if dep_link.edge.dev_only() {
-      continue;
-    }
-    // ignore root crates (when used as dependency)
-    if root_crates.contains(dep_link.to.id()) {
       continue;
     }
     create_or_update_dependency(&mut analysis_result, &dep_link);

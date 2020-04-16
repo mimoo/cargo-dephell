@@ -474,6 +474,7 @@
                 <a href="#" id="btn_target_feature" class="btn-gradient cyan mini">not showing unused dependencies</a>
                 <a href="#" id="btn_total_loc" class="btn-gradient orange mini">showing lines of code for transitive dependencies</a>
                 <a href="#" id="btn_transitive_deps" class="btn-gradient yellow mini">not showing transitive dependencies</a>
+                <a href="#" id="btn_internal_deps" class="btn-gradient purple mini"><i class="fab fa-font-awesome-flag"></i> not showing internal dependencies</a>
             </div>
             <!-- TODO: change URL with `crumble` when clicking + keep what's sorted in memory -->
             <div id="crumble"></div>
@@ -698,13 +699,22 @@
             // fetch analysis result for that package
             let package = analysis_result[package_id];
 
-            // don't display the package if not used + configuration doesn't show non-used packages
+            // don't display the package if not used + configuration wants that
             if (!package.used && !configuration.show_not_used) {
+                return;
+            }
+            // don't display the package if it's internal + configuration wants that
+            if (package.internal && !configuration.show_internal) {
                 return;
             }
 
             let html = "<tr>";
-            html += '<td><a href="#'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
+
+            if (package.internal) {
+                html += '<td><a href="#'+package_id+'" class="dep_name"><i class="fab fa-font-awesome-flag"></i> ' + package["name"] + '</a></td>';
+            } else {
+                html += '<td><a href="#'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
+            }
             html += "<td>" + package["transitive_dependencies"].length + "</td>";
             html += "<td>" + package["versions"].length + "</td>";
             html += "<td>" + package["root_importers"].length + "</td>";
@@ -754,10 +764,10 @@
         //
 
         function toggle_wording(target) {
-            if (target.innerHTML.slice(0,3) == "not") {
-                target.innerHTML = target.innerHTML.replace("not ", "");
+            if (target.innerHTML.includes("not showing")) {
+                target.innerHTML = target.innerHTML.replace("not showing", "showing");
             } else {
-                target.innerHTML = "not " + target.innerHTML;
+                target.innerHTML = target.innerHTML.replace("showing", "not showing");
             }
         }
 
@@ -797,6 +807,20 @@
             reset_sort_icons();
             // toggle config
             configuration.show_transitive = !configuration.show_transitive;
+            // refresh display with new config
+            refresh_displayed_packages();
+            //
+            event.preventDefault();
+        });
+
+        // toggle internal deps
+        document.querySelector("#btn_internal_deps").addEventListener("click", (event) => {
+            // toggle wording of button
+            toggle_wording(event.target);
+            // reset sorting
+            reset_sort_icons();
+            // toggle config
+            configuration.show_internal = !configuration.show_internal;
             // refresh display with new config
             refresh_displayed_packages();
             //
@@ -857,6 +881,7 @@
             show_not_used: false,
             show_total_loc: false,
             show_transitive: false,
+            show_internal: true,
             sorted_by: "name",
             sorted_asc: true,
             crumbles: []
