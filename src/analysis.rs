@@ -230,11 +230,9 @@ pub fn analyze_repo(
   // ---------------------------------------------
   //
 
-  // TODO: `cargo build --message-format=json` probably has the hashes of the dep-info files
-  // TODO: maybe we don't need to re-build in a different folder (optimization)
   let target_dir = TempDir::new("target_dir").expect("could not create temporary folder");
   let target_dir = target_dir.path();
-  std::process::Command::new("cargo")
+  let output = std::process::Command::new("cargo")
     .args(&[
       "build",
       "--manifest-path",
@@ -245,6 +243,11 @@ pub fn analyze_repo(
     ])
     .output()
     .expect("failed to build crate");
+  if !output.status.success() {
+    eprintln!("dephell: could not build the target manifest path.");
+    eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
+    return Err("Could not build the target manifest path.".to_string());
+  }
 
   // Analyze!
   // --------
