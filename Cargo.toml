@@ -1,6 +1,6 @@
 [package]
 name = "cargo-dephell"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["David Wong <davidwong.crypto@gmail.com>"]
 edition = "2018"
 categories = ["command-line-utilities", "development-tools::cargo-plugins"]
