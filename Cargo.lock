@@ -207,7 +207,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-dephell"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "askama",
  "base64 0.12.0",
