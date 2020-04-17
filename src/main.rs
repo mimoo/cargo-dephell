@@ -114,7 +114,7 @@ fn main() {
     if !quiet {
         println!("=========================");
         println!("   ~~ CARGO DEPHELL ~~");
-        println!("========================="\n\n");
+        println!("=========================\n\n");
         println!("  please wait, this can take a while...\n");
     }
 
