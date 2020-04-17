@@ -962,7 +962,7 @@
             let package_name = event.target.innerHTML; // necessary for main deps
             let package_id = event.target.getAttribute("href").slice(1);
             // add to crumbles
-            configuration.crumbles.push(dep_id);
+            configuration.crumbles.push(package_id);
             refresh_crumble();
             // display info about the dependency
             let package_info = analysis_result[package_id];
