@@ -609,35 +609,55 @@
             return risk_score;
         }
 
-        // add total_loc, total_rust_loc, total_unsafe_loc fields to each dependency
         function calculate_total_loc(package_id) {
-            let total_loc = 0;
-            let total_rust_loc = 0;
-            let total_unsafe_loc = 0;
-            // does it have any dependencies?
-            let transitive_dependencies = analysis_result[package_id]["transitive_dependencies"];
-            // no
-            if (transitive_dependencies.length == 0) {
-                analysis_result[package_id]["total_loc"] = analysis_result[package_id]["loc"];
-                analysis_result[package_id]["total_rust_loc"] = analysis_result[package_id]["rust_loc"];
-                analysis_result[package_id]["total_unsafe_loc"] = analysis_result[package_id]["unsafe_loc"];
-                return;
-            } 
-            // yes
-            for (transitive_dependency of transitive_dependencies) {
-                // already has the information we need or do we recurse?
-                if (!analysis_result[transitive_dependency].hasOwnProperty("total_rust_loc")) {
-                    calculate_total_loc(transitive_dependency);
+            let backtrack = [];
+            let package_ids = [package_id];
+            let sorted = [];
+            while (true) {
+                // get next element
+                let package_id = package_ids.pop();
+                // get its children
+                let next_deps = analysis_result[package_id].direct_dependencies;
+                // easy: it doesn't have children
+                if (next_deps.length == 0) {
+                    analysis_result[package_id]["total_loc"] = analysis_result[package_id]["loc"];
+                    analysis_result[package_id]["total_rust_loc"] = analysis_result[package_id]["rust_loc"];
+                    analysis_result[package_id]["total_unsafe_loc"] = analysis_result[package_id]["unsafe_loc"];
+                } else {
+                    // place back in queue
+                    package_ids.push(package_id); 
+                    // attempt to compute the total opportunistically
+                    let can_update = true;
+                    let total_loc = 0;
+                    let total_rust_loc = 0;
+                    let total_unsafe_loc = 0;
+                    for (dependency of analysis_result[package_id].direct_dependencies) {
+                        // if one of the child is not a leaf, 
+                        // add it to the queue and stop the opportunistic count
+                        if (!analysis_result[dependency].hasOwnProperty("total_rust_loc")) {
+                            package_ids.push(dependency);
+                            can_update = false;
+                        } else if (can_update) {
+                            // if we are still dealing with leaves, add up
+                            total_loc += analysis_result[dependency]["total_loc"];
+                            total_rust_loc += analysis_result[dependency]["total_rust_loc"];
+                            total_unsafe_loc += analysis_result[dependency]["total_unsafe_loc"];
+                        }
+                    }
+                    // update if all the children were leaves
+                    if (can_update) {
+                        analysis_result[package_id]["total_loc"] = total_loc;
+                        analysis_result[package_id]["total_rust_loc"] = total_rust_loc;
+                        analysis_result[package_id]["total_unsafe_loc"] = total_unsafe_loc;
+                        // we can safely remove from queue now
+                        package_ids.pop();
+                    }
                 }
-                // add up
-                total_loc += analysis_result[transitive_dependency]["total_loc"];
-                total_rust_loc += analysis_result[transitive_dependency]["total_rust_loc"];
-                total_unsafe_loc += analysis_result[transitive_dependency]["total_unsafe_loc"];
+                // are we done?
+                if (package_ids.length == 0) {
+                    return;
+                }
             }
-            // update
-            analysis_result[package_id]["total_loc"] = total_loc;
-            analysis_result[package_id]["total_rust_loc"] = total_rust_loc;
-            analysis_result[package_id]["total_unsafe_loc"] = total_unsafe_loc;
         }
 
         //
@@ -843,11 +863,6 @@
             document.querySelector("#crumble").innerHTML = crumble;
         }
 
-        function crumble_click(dep_id) {
-            configuration.crumbles.push(dep_id);
-            refresh_crumble();
-        }
-
         document.querySelector("#crumble").addEventListener("click", (event) => {
             if (event.target && event.target.className != "dep_crumble") {
                 return;
@@ -860,6 +875,7 @@
                 // reset dependency info text
                 reset_dependency_info_text();
             } else {
+                idx =  parseInt(idx);
                 let package_id = configuration.crumbles[idx];
                 configuration.crumbles = configuration.crumbles.slice(0, idx + 1);
             }
@@ -923,7 +939,6 @@
                 package_info["root_importers"].forEach( (pkg_id) => {
                     root_importers += ", " + package_id_to_name(pkg_id);
                 });
-                console.log(root_importers);
                 document.querySelector("#root_importers").innerHTML = "<strong>importers:</strong> " + root_importers.slice(2);
                 
             }
@@ -953,7 +968,8 @@
             // refresh sorting
             reset_sort_icons();
             // add to crumbles
-            crumble_click(package_id);
+            configuration.crumbles.push(dep_id);
+            refresh_crumble();
             // display info about the dependency
             let package_info = analysis_result[package_id];
             update_info(package_info)

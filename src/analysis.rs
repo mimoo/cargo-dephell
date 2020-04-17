@@ -254,6 +254,7 @@ pub fn analyze_repo(
     package_risk.direct_dependencies = package_graph
       .dep_links(package_id)
       .unwrap()
+      .filter(|dep_link| !dep_link.edge.dev_only())
       .map(|dep_link| dep_link.to.id().clone())
       .collect();
 
@@ -261,7 +262,8 @@ pub fn analyze_repo(
     package_risk.transitive_dependencies = package_graph
       .select_forward(std::iter::once(package_id))
       .unwrap()
-      .into_iter_links(Some(DependencyDirection::Reverse))
+      .into_iter_links(Some(DependencyDirection::Forward))
+      .filter(|dep_link| !dep_link.edge.dev_only())
       .map(|dep_link| dep_link.to.id().clone())
       .collect();
 

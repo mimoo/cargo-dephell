@@ -110,12 +110,12 @@ fn main() {
 
     // pretty hello world :>
     let quiet = matches.is_present("quiet");
-    let pretty_line = "=========================";
 
     if !quiet {
-        println!("{}", pretty_line);
+        println!("=========================");
         println!("   ~~ CARGO DEPHELL ~~");
-        println!("{}\n", pretty_line);
+        println!(""========================="\n\n");
+        println!("  please wait, this can take a while...\n");
     }
 
     // parse github token (if given)
