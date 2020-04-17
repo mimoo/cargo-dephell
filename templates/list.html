@@ -499,7 +499,7 @@
                     </th>
                     <th>
                         <a href="#versions" data-tippy-content="the number of different versions of this dependency that are imported in the workspace">
-                            versions
+                            versions imported
                         </a><br>
                     </th>
                     <th>
@@ -513,18 +513,18 @@
                         </a><br>
                     </th>
                     <th class="total">
-                        <a href="#loc" data-tippy-content="total lines of code for anything (not just rust) that might end up being imported by having this dependency (this includes transitive dependencies)">
-                            loc
+                        <a href="#total_loc" data-tippy-content="total lines of code for anything (not just rust) that might end up being imported by having this dependency (this includes transitive dependencies)">
+                            total loc
                         </a><br>
                     </th>
                     <th class="total">
-                        <a href="#tota_rust_loc" data-tippy-content="total lines of rust code for this dependency and its transitive dependencies">
-                            rust loc
+                        <a href="#total_rust_loc" data-tippy-content="total lines of rust code for this dependency and its transitive dependencies">
+                            total rust loc
                         </a><br>
                     </th>
                     <th class="total">
                         <a href="#total_unsafe_loc" data-tippy-content="total lines of unsafe rust code for this dependency and its transitive dependencies">
-                            unsafe loc
+                            total unsafe loc
                         </a><br>
                     </th>
                     <th class="not_total hide">
@@ -685,7 +685,7 @@
                 }
             }
             // sort table
-            if (configuration.sorted_order == "asc") {
+            if (configuration.sorted_asc) {
                 current_packages.sort((a, b) => {
                     a = analysis_result[a][configuration.sorted_by];
                     b = analysis_result[b][configuration.sorted_by];
@@ -809,6 +809,10 @@
         document.querySelector("#btn_total_loc").addEventListener("click", (event) => {
             // toggle wording of button
             toggle_wording(event.target);
+            // toggle total columns
+            document.querySelectorAll(".total, .not_total").forEach(
+                (elem) => elem.classList.toggle("hide")
+            );
             // reset sorting
             reset_sort_icons();
             // toggle config
@@ -895,7 +899,7 @@
         // TODO: persist this in real time via URL
         let configuration = {
             show_not_used: false,
-            show_total_loc: false,
+            show_total_loc: true,
             show_transitive: false,
             show_internal: false,
             sorted_by: "name",
@@ -965,8 +969,6 @@
             // get info
             let package_name = event.target.innerHTML; // necessary for main deps
             let package_id = event.target.getAttribute("href").slice(1);
-            // refresh sorting
-            reset_sort_icons();
             // add to crumbles
             configuration.crumbles.push(dep_id);
             refresh_crumble();
