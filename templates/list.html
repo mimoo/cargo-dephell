@@ -795,8 +795,6 @@
         document.querySelector("#btn_target_feature").addEventListener("click", (event) => {
             // toggle wording of button
             toggle_wording(event.target);
-            // reset sorting
-            reset_sort_icons();
             // toggle config
             configuration.show_not_used = !configuration.show_not_used;
             // refresh display with new config
@@ -813,8 +811,6 @@
             document.querySelectorAll(".total, .not_total").forEach(
                 (elem) => elem.classList.toggle("hide")
             );
-            // reset sorting
-            reset_sort_icons();
             // toggle config
             configuration.show_total_loc = !configuration.show_total_loc;
             // refresh display with new config
@@ -827,8 +823,6 @@
         document.querySelector("#btn_transitive_deps").addEventListener("click", (event) => {
             // toggle wording of button
             toggle_wording(event.target);
-            // reset sorting
-            reset_sort_icons();
             // toggle config
             configuration.show_transitive = !configuration.show_transitive;
             // refresh display with new config
@@ -841,8 +835,6 @@
         document.querySelector("#btn_internal_deps").addEventListener("click", (event) => {
             // toggle wording of button
             toggle_wording(event.target);
-            // reset sorting
-            reset_sort_icons();
             // toggle config
             configuration.show_internal = !configuration.show_internal;
             // refresh display with new config
