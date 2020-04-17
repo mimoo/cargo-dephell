@@ -471,9 +471,9 @@
         </p>
         <nav>
             <div id="buttons">
-                <a href="#" id="btn_target_feature" class="btn-gradient cyan mini">not showing unused dependencies</a>
-                <a href="#" id="btn_total_loc" class="btn-gradient orange mini">showing lines of code for transitive dependencies</a>
-                <a href="#" id="btn_transitive_deps" class="btn-gradient yellow mini">not showing transitive dependencies</a>
+                <a href="#" id="btn_target_feature" class="btn-gradient cyan mini"><i class="fas fa-tools"></i> not showing unused dependencies</a>
+                <a href="#" id="btn_total_loc" class="btn-gradient orange mini"><i class="fas fa-align-center"></i> showing lines of code for transitive dependencies</a>
+                <a href="#" id="btn_transitive_deps" class="btn-gradient green mini"><i class="fas fa-plus"></i> not showing transitive dependencies</a>
                 <a href="#" id="btn_internal_deps" class="btn-gradient purple mini"><i class="fab fa-font-awesome-flag"></i> not showing internal dependencies</a>
             </div>
             <!-- TODO: change URL with `crumble` when clicking + keep what's sorted in memory -->
@@ -731,7 +731,7 @@
             let html = "<tr>";
 
             if (package.internal) {
-                html += '<td><a href="#'+package_id+'" class="dep_name"><i class="fab fa-font-awesome-flag"></i> ' + package["name"] + '</a></td>';
+                html += '<td><i class="fab fa-font-awesome-flag"></i> <a href="#'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
             } else {
                 html += '<td><a href="#'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
             }
