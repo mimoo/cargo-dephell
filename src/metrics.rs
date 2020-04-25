@@ -155,6 +155,7 @@ pub fn get_crates_io_dependent(
   // parse response
   if !resp.status().is_success() {
     eprintln!("dephell: crates.io request failed");
+    eprintln!("query: {}", request_url);
     eprintln!("status: {}", resp.status());
     eprintln!("text: {:?}", resp.text());
     return None;

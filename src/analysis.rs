@@ -180,7 +180,6 @@ pub fn analyze_repo(
       })
       .collect();
   }
-  // TODO: this doesn't catch the -sys crate in https://github.com/rust-rocksdb/rust-rocksdb
 
   if root_crates_to_analyze.len() == 0 {
     return Err("dephell: no package to analyze was found".to_string());
