@@ -1,6 +1,6 @@
 [package]
 name = "cargo-dephell"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["David Wong <davidwong.crypto@gmail.com>"]
 edition = "2018"
 categories = ["command-line-utilities", "development-tools::cargo-plugins"]
@@ -13,13 +13,13 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 tempdir = "0.3.7" # to build the main crate
 glob = "0.3.0"    # used to find dep-info files
-ignore = "0.4.12" # to walk through files of a directory
+ignore = "0.4.14" # to walk through files of a directory
 guppy = "0.3.1"   # to analyze dependencies
-cargo = "0.43.1"  # to get rust files in a crate
-geiger = "0.4.3"  # to calculate number of unsafe lines of code
+cargo = "0.44.0"  # to get rust files in a crate
+geiger = "0.4.4"  # to calculate number of unsafe lines of code
 loc = "0.5.0"     # to calculate number of lines of code
 chrono = "0.4.11" # used to parse date from crates.io
-regex = "1.3.5"   # used to match a repository link with a github repo
+regex = "1.3.7"   # used to match a repository link with a github repo
 reqwest = { version = "0.10.4", features = ["blocking", "json"] } # github queries
 
 # CLI stuff

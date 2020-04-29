@@ -146,9 +146,9 @@ checksum = "716960a18f978640f25101b5cbf1c6f6b0d3192fab36a2d98ca96f0ecbe41010"
 
 [[package]]
 name = "cargo"
-version = "0.43.1"
+version = "0.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91de5749ddcea3c283a042b67b77e2bdf68f28374cdcbfbe54e91368810d92e5"
+checksum = "2be4ac618c27ed1bdaef9323275205f8f29da881d0db5ceda42df4438d866e56"
 dependencies = [
  "anyhow",
  "atty",
@@ -157,6 +157,7 @@ dependencies = [
  "clap",
  "core-foundation",
  "crates-io",
+ "crossbeam-channel",
  "crossbeam-utils",
  "crypto-hash",
  "curl",
@@ -207,7 +208,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-dephell"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "askama",
  "base64 0.12.0",
@@ -333,9 +334,9 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 
 [[package]]
 name = "crates-io"
-version = "0.31.0"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a51c9064687a09f007c08645d5f3ac769030794d91b07faba7bf35284b6a212c"
+checksum = "65949ecc100abd1df7d80740ee58afb599f2447c5011bbf5acb5a039a67607ca"
 dependencies = [
  "anyhow",
  "curl",
@@ -623,9 +624,9 @@ dependencies = [
 
 [[package]]
 name = "git2"
-version = "0.11.0"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77519ef7c5beee314d0804d4534f01e0f9e8d9acdee2b7a48627e590b27e0ec4"
+checksum = "e1e02a51cd90229028c9bd8be0a0364f85b6b3199cccaa0ef39005ddbd5ac165"
 dependencies = [
  "bitflags",
  "libc",
@@ -638,9 +639,9 @@ dependencies = [
 
 [[package]]
 name = "git2-curl"
-version = "0.12.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2559abb1d87d27668d31bd868a000f0e2e0065d10e78961b62da95d7a7f1cc7"
+checksum = "502d532a2d06184beb3bc869d4d90236e60934e3382c921b203fa3c33e212bd7"
 dependencies = [
  "curl",
  "git2",
@@ -935,9 +936,9 @@ checksum = "99e85c08494b21a9054e7fe1374a732aeadaff3980b6990b94bfd3a70f690005"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.10.0"
+version = "0.12.5+1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9ec6bca50549d34a392611dde775123086acbd994e3fff64954777ce2dc2e51"
+checksum = "3eadeec65514971355bf7134967a543f71372f35b53ac6c7143e7bd157f07535"
 dependencies = [
  "cc",
  "libc",
