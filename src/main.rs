@@ -96,6 +96,8 @@ fn main() {
                 .short("q")
                 .help("suppress any output to stdout"),
         )
+        // cargo install cargo-dephell won't work without this
+        .arg(Arg::with_name("catch-cargo-cli-bug"))
         .get_matches();
 
     // get metadata from manifest path
