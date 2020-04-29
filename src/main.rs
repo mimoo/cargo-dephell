@@ -3,7 +3,6 @@ use std::path::PathBuf;
 
 use askama::Template;
 use clap::{App, Arg};
-use guppy::PackageId;
 use serde::{Deserialize, Serialize};
 
 mod analysis;
@@ -30,8 +29,8 @@ struct HtmlList {
 #[derive(Serialize, Deserialize)]
 struct JsonResult {
     root_crates: HashSet<String>,
-    main_dependencies: HashSet<PackageId>,
-    analysis_result: HashMap<PackageId, analysis::PackageRisk>,
+    main_dependencies: HashSet<String>,
+    analysis_result: HashMap<String, analysis::PackageRisk>,
 }
 
 //

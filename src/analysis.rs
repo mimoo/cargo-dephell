@@ -1,4 +1,4 @@
-use guppy::graph::{DependencyDirection, DependencyLink, PackageGraph};
+use guppy::graph::{DependencyDirection, PackageGraph, PackageLink};
 use guppy::{MetadataCommand, PackageId};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -19,13 +19,14 @@ use crate::metrics;
 
 /// PackageRisk contains information about a package after analysis.
 #[rustfmt::skip]
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct PackageRisk {
 
   // metadata
   // --------
 
   /// name of the dependency
+  #[serde(skip)]
   pub name: String,
   /// potentially different versions are pulled (bad)
   pub versions: HashSet<String>,
@@ -51,16 +52,15 @@ pub struct PackageRisk {
   /// is this dependency used for the host target and features?
   pub used: bool,
   
-  // TODO: convert all of these packageId to name
   /// direct dependencies
-  pub direct_dependencies: HashSet<PackageId>,
+  pub direct_dependencies: HashSet<String>,
   /// transitive dependencies (not including this dependency)
-  pub transitive_dependencies: HashSet<PackageId>,
+  pub transitive_dependencies: HashSet<String>,
   /// number of root crates that import this package
-  pub root_importers: Vec<PackageId>,
+  pub root_importers: Vec<String>,
   /// total number of transitive third party dependencies imported
   /// by this dependency, and only by this dependency
-  pub exclusive_deps_introduced: Vec<PackageId>,
+  pub exclusive_deps_introduced: Vec<String>,
   /// number of non-rust lines-of-code
   pub loc: u64,
   /// number of rust lines-of-code
@@ -84,7 +84,7 @@ pub struct PackageRisk {
 
 fn create_or_update_dependency(
   analysis_result: &mut HashMap<PackageId, PackageRisk>,
-  dep_link: &DependencyLink,
+  dep_link: &PackageLink,
 ) {
   match analysis_result.entry(dep_link.to.id().to_owned()) {
     Entry::Occupied(mut entry) => {
@@ -133,9 +133,9 @@ pub fn analyze_repo(
   to_ignore: Option<Vec<&str>>,
 ) -> Result<
   (
-    HashSet<String>,                 // root_crates
-    HashSet<PackageId>,              // main_dependencies
-    HashMap<PackageId, PackageRisk>, // analysis_result
+    HashSet<String>,              // root_crates
+    HashSet<String>,              // main_dependencies
+    HashMap<String, PackageRisk>, // analysis_result
   ),
   String,
 > {
@@ -193,7 +193,8 @@ pub fn analyze_repo(
 
   // TODO: combine the two loops and inline `create_or_update...`
   // find all direct dependencies
-  let mut main_dependencies: HashSet<PackageId> = HashSet::new();
+  let mut main_dependencies_ids: HashSet<PackageId> = HashSet::new();
+  let mut main_dependencies: HashSet<String> = HashSet::new();
   for root_crate in &root_crates_to_analyze {
     // (non-ignored) root crate > direct dependency
     for dep_link in package_graph.dep_links(root_crate).unwrap() {
@@ -201,16 +202,18 @@ pub fn analyze_repo(
       if dep_link.edge.dev_only() {
         continue;
       }
-      main_dependencies.insert(dep_link.to.id().to_owned());
+      main_dependencies_ids.insert(dep_link.to.id().to_owned());
+      main_dependencies.insert(dep_link.to.name().to_string());
       create_or_update_dependency(&mut analysis_result, &dep_link);
     }
   }
 
   // find all transitive dependencies
   let transitive_dependencies = package_graph
-    .select_forward(&main_dependencies)
+    .query_forward(&main_dependencies_ids)
     .unwrap()
-    .into_iter_links(Some(DependencyDirection::Forward));
+    .resolve()
+    .into_links(DependencyDirection::Forward);
   // (non-ignored) root crate > direct dependency > transitive dependencies
   for dep_link in transitive_dependencies {
     // ignore dev dependencies
@@ -254,16 +257,17 @@ pub fn analyze_repo(
       .dep_links(package_id)
       .unwrap()
       .filter(|dep_link| !dep_link.edge.dev_only())
-      .map(|dep_link| dep_link.to.id().clone())
+      .map(|dep_link| dep_link.to.name().to_string())
       .collect();
 
     // .transitive_dependencies
     package_risk.transitive_dependencies = package_graph
-      .select_forward(std::iter::once(package_id))
+      .query_forward(std::iter::once(package_id))
       .unwrap()
-      .into_iter_links(Some(DependencyDirection::Forward))
+      .resolve()
+      .into_links(DependencyDirection::Forward)
       .filter(|dep_link| !dep_link.edge.dev_only())
-      .map(|dep_link| dep_link.to.id().clone())
+      .map(|dep_link| dep_link.to.name().to_string())
       .collect();
 
     // .root_importers
@@ -327,7 +331,10 @@ pub fn analyze_repo(
       package_metadata.name().to_owned()
     })
     .collect();
-  // TODO: do the same for main_dependencies and analysis_result
+  let analysis_result: HashMap<String, PackageRisk> = analysis_result
+    .iter()
+    .map(|(_, package_risk)| (package_risk.name.clone(), package_risk.clone()))
+    .collect();
 
   //
   Ok((root_crates_to_analyze, main_dependencies, analysis_result))

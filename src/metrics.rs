@@ -224,17 +224,19 @@ pub fn get_root_importers(
   package_graph: &PackageGraph,
   root_crates: &HashSet<PackageId>,
   dependency: &PackageId,
-) -> Vec<PackageId> {
+) -> Vec<String> {
   let root_importers = package_graph
-    .select_reverse(std::iter::once(dependency))
+    .query_reverse(std::iter::once(dependency))
     .unwrap();
-  let root_importers = root_importers.into_iter_metadatas(Some(DependencyDirection::Reverse));
+  let root_importers = root_importers
+    .resolve()
+    .into_metadatas(DependencyDirection::Reverse);
   let root_importers: Vec<&PackageMetadata> = root_importers
     .filter(|pkg_metadata| root_crates.contains(&pkg_metadata.id())) // a root crate is an importer
     .collect();
   let root_importers = root_importers
     .iter()
-    .map(|pkg_metadata| pkg_metadata.id().clone())
+    .map(|pkg_metadata| pkg_metadata.name().to_string())
     .collect();
   root_importers
 }
@@ -244,32 +246,38 @@ pub fn get_exclusive_deps(
   package_graph: &PackageGraph,
   root_crates: &HashSet<PackageId>,
   dependency: &PackageId,
-) -> Vec<PackageId> {
+) -> Vec<String> {
   // get all the transitive dependencies of `dependency`
   let transitive_deps = package_graph
-    .select_forward(std::iter::once(dependency))
-    .unwrap();
-  let transitive_deps = transitive_deps.into_iter_ids(Some(DependencyDirection::Forward));
+    .query_forward(std::iter::once(dependency))
+    .unwrap()
+    .resolve()
+    .into_metadatas(DependencyDirection::Forward);
   // re-create a graph without edges leading to our dependency (and its tree)
   let mut package_graph = package_graph.clone();
   package_graph.retain_edges(|_, dep_link| !(dep_link.to.id() == dependency));
+
   // obtain all dependencies from the root_crates
-  let new_all = package_graph.select_forward(root_crates.iter()).unwrap();
+  let new_all = package_graph.query_forward(root_crates.iter()).unwrap();
   let new_all: Vec<_> = new_all
-    .into_iter_ids(Some(DependencyDirection::Forward))
+    .resolve()
+    .into_ids(DependencyDirection::Forward)
     .collect();
+
   // check if the original transitive dependencies are in there
   let mut exclusive_deps = Vec::new();
   for transitive_dep in transitive_deps {
     // don't include the dependency itself in this list
-    if transitive_dep == dependency {
+    if transitive_dep.id() == dependency {
       continue;
     }
     // if it's not in the new graph, it's exclusive to our dependency!
-    if !new_all.contains(&transitive_dep) {
-      exclusive_deps.push(transitive_dep.clone());
+    if !new_all.contains(&transitive_dep.id()) {
+      exclusive_deps.push(transitive_dep.name().to_string());
     }
   }
+
+  //
   exclusive_deps
 }
 

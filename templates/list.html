@@ -731,9 +731,9 @@
             let html = "<tr>";
 
             if (package.internal) {
-                html += '<td><i class="fab fa-font-awesome-flag"></i> <a href="#'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
+                html += '<td><i class="fab fa-font-awesome-flag"></i> <a href="#'+package_id+'" class="dep_name">' + package_id + '</a></td>';
             } else {
-                html += '<td><a href="#'+package_id+'" class="dep_name">' + package["name"] + '</a></td>';
+                html += '<td><a href="#'+package_id+'" class="dep_name">' + package_id + '</a></td>';
             }
             html += "<td>" + package["transitive_dependencies"].length + "</td>";
             html += "<td>" + package["versions"].length + "</td>";
@@ -769,7 +769,7 @@
             }
 
             if (package["crates_io_last_updated"]) {
-                html += '<td><a href="https://crates.io/crates/'+ package["name"] +'">' + package["crates_io_last_updated"] + '</a></td>';
+                html += '<td><a href="https://crates.io/crates/'+ package_id +'">' + package["crates_io_last_updated"] + '</a></td>';
             } else {
                 html += "<td></td>";
             }
@@ -853,8 +853,7 @@
         function refresh_crumble() {    
             let crumble = crumble_home;
             for (const [idx, dep_id] of configuration.crumbles.entries()) {
-                let dep_name = analysis_result[dep_id]["name"];
-                crumble += ' <i class="fas fa-caret-right"></i> <a href="#'+idx+'" class="dep_crumble">' + dep_name + '</a>';
+                crumble += ' <i class="fas fa-caret-right"></i> <a href="#'+idx+'" class="dep_crumble">' + dep_id + '</a>';
             }
             document.querySelector("#crumble").innerHTML = crumble;
         }

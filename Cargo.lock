@@ -669,9 +669,9 @@ dependencies = [
 
 [[package]]
 name = "guppy"
-version = "0.1.8"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df2ea64e2e811725d2b5432be6c86d670de58f2cb6255b5966a13572e6f3c89a"
+checksum = "72a17a5699dd0d2720cdb109a801a2f8767772b5d7758a9f0f3a1723f8fb9ca4"
 dependencies = [
  "cargo_metadata",
  "fixedbitset",
