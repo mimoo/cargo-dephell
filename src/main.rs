@@ -109,9 +109,10 @@ fn main() {
             current_dir.to_str().unwrap().to_owned()
         });
 
-    // pretty hello world :>
-    let quiet = matches.is_present("quiet");
+    // quiet if wanted, or JSON
+    let quiet = matches.is_present("quiet") || !matches.is_present("html-output");
 
+    // pretty hello world :>
     if !quiet {
         println!("=========================");
         println!("   ~~ CARGO DEPHELL ~~");
@@ -160,6 +161,7 @@ fn main() {
         github_token,
         packages,
         to_ignore,
+        quiet,
     );
     let (root_crates, main_dependencies, analysis_result) = match result {
         Err(err) => {

@@ -98,9 +98,9 @@ checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 
 [[package]]
 name = "base64"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d5ca2cd0adc3f48f9e9ea5a6bbdf9ccc0bfade884847e484d452414c7ccffb3"
+checksum = "53d1ccbaf7d9ec9537465a97bf19edc1a4e158ecb49fc16178202238c569cc42"
 
 [[package]]
 name = "bitflags"
@@ -146,9 +146,9 @@ checksum = "716960a18f978640f25101b5cbf1c6f6b0d3192fab36a2d98ca96f0ecbe41010"
 
 [[package]]
 name = "cargo"
-version = "0.44.0"
+version = "0.44.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2be4ac618c27ed1bdaef9323275205f8f29da881d0db5ceda42df4438d866e56"
+checksum = "2a527349b7aae57518eec4bce77914669ba3c4a0ec7d6330575cea80edd251a4"
 dependencies = [
  "anyhow",
  "atty",
@@ -211,11 +211,11 @@ name = "cargo-dephell"
 version = "0.4.0"
 dependencies = [
  "askama",
- "base64 0.12.0",
+ "base64 0.12.1",
  "cargo",
+ "cargo_metadata 0.10.0",
  "chrono",
  "clap",
- "geiger",
  "glob",
  "guppy",
  "ignore",
@@ -241,6 +241,18 @@ name = "cargo_metadata"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46e3374c604fb39d1a2f35ed5e4a4e30e60d01fab49446e08f1b3e9a90aef202"
+dependencies = [
+ "semver",
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
+
+[[package]]
+name = "cargo_metadata"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8de60b887edf6d74370fc8eb177040da4847d971d6234c7b13a6da324ef0caf"
 dependencies = [
  "semver",
  "serde",
@@ -285,9 +297,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "2.33.0"
+version = "2.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5067f5bb2d80ef5d68b4c87db81601f0b75bca627bc2ef76b141d7b846a3c6d9"
+checksum = "bdfa80d47f954d53a35a64987ca1422f495b8d6483c0fe9f7117b36c2a792129"
 dependencies = [
  "ansi_term",
  "atty",
@@ -334,9 +346,9 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 
 [[package]]
 name = "crates-io"
-version = "0.32.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65949ecc100abd1df7d80740ee58afb599f2447c5011bbf5acb5a039a67607ca"
+checksum = "a51c9064687a09f007c08645d5f3ac769030794d91b07faba7bf35284b6a212c"
 dependencies = [
  "anyhow",
  "curl",
@@ -602,16 +614,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "geiger"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6b83087b52828d7128ff39a7812c54c136d9f0d0e4d3c2210ad674a70179462"
-dependencies = [
- "proc-macro2",
- "syn",
-]
-
-[[package]]
 name = "getrandom"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -670,11 +672,11 @@ dependencies = [
 
 [[package]]
 name = "guppy"
-version = "0.3.1"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72a17a5699dd0d2720cdb109a801a2f8767772b5d7758a9f0f3a1723f8fb9ca4"
+checksum = "a830ab35ef74099bb82f0c0ea223c4a9876e4ad3ccf103059ce5277f5dd5a5f6"
 dependencies = [
- "cargo_metadata",
+ "cargo_metadata 0.9.1",
  "fixedbitset",
  "indexmap",
  "nested",
@@ -833,11 +835,10 @@ dependencies = [
 
 [[package]]
 name = "ignore"
-version = "0.4.14"
+version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddf60d063dbe6b75388eec66cfc07781167ae3d34a09e0c433e6c5de0511f7fb"
+checksum = "128b9e89d15a3faa642ee164c998fd4fae3d89d054463cddb2c25a7baad3a352"
 dependencies = [
- "crossbeam-channel",
  "crossbeam-utils",
  "globset",
  "lazy_static",
@@ -1539,18 +1540,18 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
-version = "1.0.106"
+version = "1.0.110"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36df6ac6412072f67cf767ebbde4133a5b2e88e76dc6187fa7104cd16f783399"
+checksum = "99e7b308464d16b56eba9964e4972a3eee817760ab60d88c3f86e1fecb08204c"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.106"
+version = "1.0.110"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e549e3abf4fb8621bd1609f11dfc9f5e50320802273b12f3811a67e6716ea6c"
+checksum = "818fbf6bfa9a42d3bfcaca148547aa00c7b915bec71d1757aa2d44ca68771984"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1677,9 +1678,9 @@ dependencies = [
 
 [[package]]
 name = "target-spec"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b241a0ae681e15277f82a5dcf92ec230de0492b825f10f1532322c03fd512449"
+checksum = "b362d5fe5a647d72e69b967ef7730749049a7960a0da3680e7eca350ef9d4c3b"
 dependencies = [
  "cfg-expr",
 ]

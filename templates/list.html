@@ -475,6 +475,7 @@
                 <a href="#" id="btn_total_loc" class="btn-gradient orange mini"><i class="fas fa-align-center"></i> showing lines of code for transitive dependencies</a>
                 <a href="#" id="btn_transitive_deps" class="btn-gradient green mini"><i class="fas fa-plus"></i> not showing transitive dependencies</a>
                 <a href="#" id="btn_internal_deps" class="btn-gradient purple mini"><i class="fab fa-font-awesome-flag"></i> not showing internal dependencies</a>
+<!--                <a href="#">not marking exclusive dependencies</a> -->
             </div>
             <!-- TODO: change URL with `crumble` when clicking + keep what's sorted in memory -->
             <div id="crumble"></div>
@@ -607,57 +608,6 @@
                 risk_score += weights[metric] * actual_number;
             }
             return risk_score;
-        }
-
-        function calculate_total_loc(package_id) {
-            let backtrack = [];
-            let package_ids = [package_id];
-            let sorted = [];
-            while (true) {
-                // get next element
-                let package_id = package_ids.pop();
-                // get its children
-                let next_deps = analysis_result[package_id].direct_dependencies;
-                // easy: it doesn't have children
-                if (next_deps.length == 0) {
-                    analysis_result[package_id]["total_loc"] = analysis_result[package_id]["loc"];
-                    analysis_result[package_id]["total_rust_loc"] = analysis_result[package_id]["rust_loc"];
-                    analysis_result[package_id]["total_unsafe_loc"] = analysis_result[package_id]["unsafe_loc"];
-                } else {
-                    // place back in queue
-                    package_ids.push(package_id); 
-                    // attempt to compute the total opportunistically
-                    let can_update = true;
-                    let total_loc = 0;
-                    let total_rust_loc = 0;
-                    let total_unsafe_loc = 0;
-                    for (dependency of analysis_result[package_id].direct_dependencies) {
-                        // if one of the child is not a leaf, 
-                        // add it to the queue and stop the opportunistic count
-                        if (!analysis_result[dependency].hasOwnProperty("total_rust_loc")) {
-                            package_ids.push(dependency);
-                            can_update = false;
-                        } else if (can_update) {
-                            // if we are still dealing with leaves, add up
-                            total_loc += analysis_result[dependency]["total_loc"];
-                            total_rust_loc += analysis_result[dependency]["total_rust_loc"];
-                            total_unsafe_loc += analysis_result[dependency]["total_unsafe_loc"];
-                        }
-                    }
-                    // update if all the children were leaves
-                    if (can_update) {
-                        analysis_result[package_id]["total_loc"] = total_loc;
-                        analysis_result[package_id]["total_rust_loc"] = total_rust_loc;
-                        analysis_result[package_id]["total_unsafe_loc"] = total_unsafe_loc;
-                        // we can safely remove from queue now
-                        package_ids.pop();
-                    }
-                }
-                // are we done?
-                if (package_ids.length == 0) {
-                    return;
-                }
-            }
         }
 
         //
@@ -900,11 +850,6 @@
 
         // obtain result and parse JSON
         let {root_crates, main_dependencies, analysis_result} = JSON.parse(atob("{{ json_result }}"));
-
-        // calculate total LOCs:
-        for (dependency of main_dependencies) {
-            calculate_total_loc(dependency);
-        }
 
         // display jumbotron
         let root_crates_with_comma = root_crates.reduce( (acc, pkg_name) => acc + ", " + pkg_name);

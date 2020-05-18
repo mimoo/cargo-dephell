@@ -18,6 +18,7 @@ use crate::metrics;
 //
 
 /// PackageRisk contains information about a package after analysis.
+/// Note that the word "total" means that it includes transitive dependencies.
 #[rustfmt::skip]
 #[derive(Default, Serialize, Deserialize, Clone)]
 pub struct PackageRisk {
@@ -35,14 +36,15 @@ pub struct PackageRisk {
   /// description from Cargo.toml
   pub description: Option<String>,
 
-  // TODO: get description of each crate from Cargo.toml
-
   // useful for analysis
   // -------------------
 
   /// path to the actual source code on disk
   #[serde(skip)]
   pub manifest_path: PathBuf,
+  /// have we calculated the total LOCs for this dep?
+  #[serde(skip)]
+  pub total_calculated: bool,
 
   // analysis result
   // ---------------
@@ -61,12 +63,15 @@ pub struct PackageRisk {
   /// total number of transitive third party dependencies imported
   /// by this dependency, and only by this dependency
   pub exclusive_deps_introduced: Vec<String>,
-  /// number of non-rust lines-of-code
+  /// (total) number of non-rust lines-of-code
   pub loc: u64,
-  /// number of rust lines-of-code
+  pub total_loc: u64,
+  /// (total) number of rust lines-of-code
   pub rust_loc: u64,
-  /// number of lines of unsafe code
+  pub total_rust_loc: u64,
+  /// (total) number of lines of unsafe code
   pub unsafe_loc: u64,
+  pub total_unsafe_loc: u64,
   /// number of github stars, if any
   pub stargazers_count: Option<u64>,
   /// active contributors on github (in the last 6 months)
@@ -86,23 +91,23 @@ fn create_or_update_dependency(
   analysis_result: &mut HashMap<PackageId, PackageRisk>,
   dep_link: &PackageLink,
 ) {
-  match analysis_result.entry(dep_link.to.id().to_owned()) {
+  match analysis_result.entry(dep_link.to().id().to_owned()) {
     Entry::Occupied(mut entry) => {
       let package_risk = entry.get_mut();
       package_risk
         .versions
-        .insert(dep_link.to.version().to_string());
+        .insert(dep_link.to().version().to_string());
     }
     Entry::Vacant(entry) => {
       let mut package_risk = PackageRisk::default();
-      package_risk.name = dep_link.to.name().to_owned();
+      package_risk.name = dep_link.to().name().to_owned();
       package_risk
         .versions
-        .insert(dep_link.to.version().to_string());
-      package_risk.repo = dep_link.to.repository().map(|x| x.to_owned());
-      package_risk.description = dep_link.to.description().map(|x| x.to_owned());
-      package_risk.manifest_path = dep_link.to.manifest_path().to_path_buf();
-      package_risk.internal = dep_link.to.in_workspace();
+        .insert(dep_link.to().version().to_string());
+      package_risk.repo = dep_link.to().repository().map(|x| x.to_owned());
+      package_risk.description = dep_link.to().description().map(|x| x.to_owned());
+      package_risk.manifest_path = dep_link.to().manifest_path().to_path_buf();
+      package_risk.internal = dep_link.to().in_workspace();
       entry.insert(package_risk);
     }
   };
@@ -131,6 +136,7 @@ pub fn analyze_repo(
   github_token: Option<(&str, &str)>,
   packages: Option<Vec<&str>>,
   to_ignore: Option<Vec<&str>>,
+  quiet: bool,
 ) -> Result<
   (
     HashSet<String>,              // root_crates
@@ -150,6 +156,15 @@ pub fn analyze_repo(
 
   // construct graph with guppy
   let package_graph = PackageGraph::from_command(&mut cmd).map_err(|err| err.to_string())?;
+
+  // check for dependencies
+  if !quiet {
+  let cycles = package_graph.cycles().all_cycles();
+    for cycle in cycles {
+      let cycle: Vec<&str> = cycle.iter().map(|x| package_graph.metadata(&x).unwrap().name()).collect();
+      println!("- dependency cycle detected: {:?}", cycle);
+    }
+  }
 
   // Obtain internal dependencies
   // ----------------------------
@@ -197,13 +212,15 @@ pub fn analyze_repo(
   let mut main_dependencies: HashSet<String> = HashSet::new();
   for root_crate in &root_crates_to_analyze {
     // (non-ignored) root crate > direct dependency
-    for dep_link in package_graph.dep_links(root_crate).unwrap() {
+    let dep_links = package_graph
+      .metadata(root_crate)
+      .unwrap()
+      .direct_links()
       // ignore dev dependencies
-      if dep_link.edge.dev_only() {
-        continue;
-      }
-      main_dependencies_ids.insert(dep_link.to.id().to_owned());
-      main_dependencies.insert(dep_link.to.name().to_string());
+      .filter(|dep_link| !dep_link.dev_only());
+    for dep_link in dep_links {
+      main_dependencies_ids.insert(dep_link.to().id().to_owned());
+      main_dependencies.insert(dep_link.to().name().to_string());
       create_or_update_dependency(&mut analysis_result, &dep_link);
     }
   }
@@ -211,15 +228,14 @@ pub fn analyze_repo(
   // find all transitive dependencies
   let transitive_dependencies = package_graph
     .query_forward(&main_dependencies_ids)
-    .unwrap()
-    .resolve()
-    .into_links(DependencyDirection::Forward);
+    .unwrap();
+  // ignore dev dependencies
+  let transitive_dependencies = transitive_dependencies
+    .resolve_with_fn(|_, link| !link.dev_only());
+  let transitive_dependencies = transitive_dependencies
+    .links(DependencyDirection::Reverse);
   // (non-ignored) root crate > direct dependency > transitive dependencies
   for dep_link in transitive_dependencies {
-    // ignore dev dependencies
-    if dep_link.edge.dev_only() {
-      continue;
-    }
     create_or_update_dependency(&mut analysis_result, &dep_link);
   }
 
@@ -231,20 +247,39 @@ pub fn analyze_repo(
   let target_dir = TempDir::new("target_dir").expect("could not create temporary folder");
   let target_dir = target_dir.path();
   let output = std::process::Command::new("cargo")
+    .env("RUSTFLAGS", "-Funsafe-code  --cap-lints=warn")
     .args(&[
-      "build",
+      "check",
+      "-vv",
+      "--message-format=json-diagnostic-rendered-ansi",
       "--manifest-path",
       manifest_path,
       "--target-dir",
       target_dir.to_str().unwrap(),
-      "-q",
     ])
     .output()
     .expect("failed to build crate");
-  if !output.status.success() {
+
+  if !output.status.success() && !quiet {
     eprintln!("dephell: could not build the target manifest path.");
     eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
     return Err("Could not build the target manifest path.".to_string());
+  }
+
+  // .unsafe_loc - find unsafe by analyzing the compiler's output
+  let output = std::io::Cursor::new(output.stdout);
+  for message in cargo_metadata::Message::parse_stream(output) {
+    match message {
+      Ok(cargo_metadata::Message::CompilerMessage(msg)) => {
+        if let Some(code) = msg.message.code {
+          if code.code == "unsafe_code" {
+            let package_id = PackageId::new(msg.package_id.repr);
+            analysis_result.entry(package_id).and_modify(|r| r.unsafe_loc += 1);
+          }
+        }
+      }
+      _ => (),
+    }
   }
 
   // Analyze!
@@ -254,10 +289,11 @@ pub fn analyze_repo(
   for (package_id, mut package_risk) in analysis_result.iter_mut() {
     // .direct_dependencies
     package_risk.direct_dependencies = package_graph
-      .dep_links(package_id)
+      .metadata(package_id)
       .unwrap()
-      .filter(|dep_link| !dep_link.edge.dev_only())
-      .map(|dep_link| dep_link.to.name().to_string())
+      .direct_links()
+      .filter(|dep_link| !dep_link.dev_only())
+      .map(|dep_link| dep_link.to().name().to_string())
       .collect();
 
     // .transitive_dependencies
@@ -265,9 +301,9 @@ pub fn analyze_repo(
       .query_forward(std::iter::once(package_id))
       .unwrap()
       .resolve()
-      .into_links(DependencyDirection::Forward)
-      .filter(|dep_link| !dep_link.edge.dev_only())
-      .map(|dep_link| dep_link.to.name().to_string())
+      .links(DependencyDirection::Forward)
+      .filter(|dep_link| !dep_link.dev_only())
+      .map(|dep_link| dep_link.to().name().to_string())
       .collect();
 
     // .root_importers
@@ -287,11 +323,9 @@ pub fn analyze_repo(
       &target_dir,
     );
     package_risk.used = used;
+
     // .loc + .rust_loc
     metrics::get_loc(&mut package_risk, &dependency_files);
-
-    // .unsafe_loc
-    metrics::get_unsafe(&mut package_risk, &dependency_files);
 
     // is this a github repo?
     if let Some(repo_url) = &package_risk.repo {
@@ -313,6 +347,7 @@ pub fn analyze_repo(
     }
 
     // .crates_io_dependent
+    // TODO: do not make a request to crates.io if this is not a crates.io dep
     let crates_io_dependent =
       metrics::get_crates_io_dependent(http_client.clone(), &package_risk.name);
     package_risk.crates_io_dependent = crates_io_dependent;
@@ -323,7 +358,80 @@ pub fn analyze_repo(
     package_risk.crates_io_last_updated = crates_io_last_updated;
   }
 
+  // total LOC
+  // ---------
+  // we need to calculate total LOC after the fact
+
+  let transitive_dependencies = package_graph
+    .query_forward(&main_dependencies_ids)
+    .unwrap();
+    // ignore dev dependencies
+  let transitive_dependencies = transitive_dependencies
+    .resolve_with_fn(|_, link| !link.dev_only());
+  let transitive_dependencies = transitive_dependencies
+    .package_ids(DependencyDirection::Reverse);
+
+  'main_loop: for package_id in transitive_dependencies {
+    // already calculated
+    if analysis_result[&package_id].total_calculated {
+      continue;
+    }
+
+    // get direct deps
+    let direct_deps: Vec<_> = package_graph
+      .metadata(package_id)
+      .unwrap()
+      .direct_links()
+      .filter(|dep_link| !dep_link.dev_only())
+      .map(|dep_link| dep_link.to().id())
+      .collect();
+
+    // easy, no deps
+    if direct_deps.len() == 0 {
+      let loc = analysis_result[&package_id].loc;
+      let rust_loc = analysis_result[&package_id].rust_loc;
+      let unsafe_loc = analysis_result[&package_id].unsafe_loc;
+      let package_risk = analysis_result.get_mut(&package_id).unwrap();
+      package_risk.total_loc = loc;
+      package_risk.total_rust_loc = rust_loc;
+      package_risk.total_unsafe_loc = unsafe_loc;
+      package_risk.total_calculated = true;
+      // next
+      continue;
+    }
+
+    // otherwise compute from direct dependencies total count
+    let mut total_loc = 0;
+    let mut total_rust_loc = 0;
+    let mut total_unsafe_loc = 0;
+
+    for direct_dep_id in direct_deps {
+      let direct_dep = &analysis_result[direct_dep_id];
+      if !direct_dep.total_calculated {
+
+        println!("total loc error: {:?} was not calculated due to {:?} not being calculated", analysis_result[&package_id].name, direct_dep.name);
+        continue 'main_loop;
+      }
+
+      total_loc += direct_dep.total_loc;
+      total_rust_loc += direct_dep.total_rust_loc;
+      total_unsafe_loc += direct_dep.total_unsafe_loc;
+    }
+
+    // set
+    let package_risk = analysis_result.get_mut(&package_id).unwrap();
+    package_risk.total_loc = total_loc;
+    package_risk.total_rust_loc = total_rust_loc;
+    package_risk.total_unsafe_loc = total_unsafe_loc;
+    package_risk.total_calculated = true;
+
+    // next
+  }
+
   // PackageId -> name
+  // -----------------
+  // this is useful because PackageIds are long strings,
+  // and we only care about package names for the result
   let root_crates_to_analyze: HashSet<String> = root_crates_to_analyze
     .iter()
     .map(|pkg_id| {

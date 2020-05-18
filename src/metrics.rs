@@ -2,7 +2,6 @@ use guppy::graph::{DependencyDirection, PackageGraph, PackageMetadata};
 use guppy::PackageId;
 use serde::Deserialize;
 use std::collections::HashSet;
-use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
 
@@ -229,9 +228,10 @@ pub fn get_root_importers(
     .query_reverse(std::iter::once(dependency))
     .unwrap();
   let root_importers = root_importers
-    .resolve()
-    .into_metadatas(DependencyDirection::Reverse);
-  let root_importers: Vec<&PackageMetadata> = root_importers
+    .resolve();
+    let root_importers = root_importers
+    .packages(DependencyDirection::Reverse);
+  let root_importers: Vec<PackageMetadata> = root_importers
     .filter(|pkg_metadata| root_crates.contains(&pkg_metadata.id())) // a root crate is an importer
     .collect();
   let root_importers = root_importers
@@ -250,18 +250,21 @@ pub fn get_exclusive_deps(
   // get all the transitive dependencies of `dependency`
   let transitive_deps = package_graph
     .query_forward(std::iter::once(dependency))
-    .unwrap()
-    .resolve()
-    .into_metadatas(DependencyDirection::Forward);
+    .unwrap();
+  let transitive_deps = transitive_deps
+    .resolve();
+  let transitive_deps = transitive_deps
+    .packages(DependencyDirection::Forward);
+    
   // re-create a graph without edges leading to our dependency (and its tree)
-  let mut package_graph = package_graph.clone();
-  package_graph.retain_edges(|_, dep_link| !(dep_link.to.id() == dependency));
+  let package_graph = package_graph.clone();
+  package_graph.query_forward(root_crates.iter()).unwrap().resolve_with_fn(|_, link| !(link.to().id() == dependency));
 
   // obtain all dependencies from the root_crates
   let new_all = package_graph.query_forward(root_crates.iter()).unwrap();
   let new_all: Vec<_> = new_all
     .resolve()
-    .into_ids(DependencyDirection::Forward)
+    .package_ids(DependencyDirection::Forward)
     .collect();
 
   // check if the original transitive dependencies are in there
@@ -294,27 +297,6 @@ pub fn get_loc(package_risk: &mut PackageRisk, dependency_files: &HashSet<String
       if lang == loc::Lang::Rust {
         package_risk.rust_loc += u64::from(count.code);
       }
-    }
-  }
-}
-
-/// counts the unsafe lines-of-code of all the given rust files
-pub fn get_unsafe(package_risk: &mut PackageRisk, dependency_files: &HashSet<String>) {
-  for dependency_file in dependency_files {
-    let dependency_path = Path::new(dependency_file);
-    if dependency_path.extension() != Some(OsStr::new("rs")) {
-      continue;
-    }
-
-    // TODO: is this the right way to count unsafe?
-    if let Ok(res) = geiger::find_unsafe_in_file(dependency_path, geiger::IncludeTests::No) {
-      // update
-      let mut unsafe_loc = res.counters.functions.unsafe_;
-      unsafe_loc += res.counters.exprs.unsafe_;
-      unsafe_loc += res.counters.item_impls.unsafe_;
-      unsafe_loc += res.counters.item_traits.unsafe_;
-      unsafe_loc += res.counters.methods.unsafe_;
-      package_risk.unsafe_loc += unsafe_loc;
     }
   }
 }
