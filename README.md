@@ -8,6 +8,12 @@ Cargo dephell is heavily biased towards the libra codebase (where we have a work
 
 ## Usage
 
+Installation:
+
+```sh
+cargo install --git https://github.com/mimoo/cargo-dephell
+```
+
 **Make sure you've built your crate or workspace first.**
 
 Just run the program on the relevant `Cargo.toml` and output the result to an HTML file:
