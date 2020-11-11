@@ -1,6 +1,6 @@
 # Cargo dephell
 
-![cargo dephell](https://i.imgur.com/NUNFPfC.png)
+![cargo dephell](https://i.imgur.com/XHgZR0y.png)
 
 **Cargo dephell** is a tool to analyze the third-party dependencies imported by a rust crate or rust workspace.
 It makes use of [guppy](https://crates.io/crates/guppy) to parse dependencies, [geiger](https://crates.io/crates/guppy) to find unsafe code and [loc](https://crates.io/crates/loc) to count the number of lines of code.
