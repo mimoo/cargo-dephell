@@ -1,3 +1,4 @@
+use camino::Utf8PathBuf;
 use guppy::graph::{DependencyDirection, PackageGraph, PackageLink};
 use guppy::{MetadataCommand, PackageId};
 use regex::Regex;
@@ -7,7 +8,6 @@ use std::collections::{
     HashSet,
 };
 use std::iter::FromIterator;
-use std::path::PathBuf;
 use tempdir::TempDir;
 
 use crate::metrics;
@@ -41,7 +41,7 @@ pub struct PackageRisk {
 
   /// path to the actual source code on disk
   #[serde(skip)]
-  pub manifest_path: PathBuf,
+  pub manifest_path: Utf8PathBuf,
   /// have we calculated the total LOCs for this dep?
   #[serde(skip)]
   pub total_calculated: bool,

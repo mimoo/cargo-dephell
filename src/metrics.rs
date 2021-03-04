@@ -1,3 +1,4 @@
+use camino::Utf8Path;
 use guppy::graph::{DependencyDirection, PackageGraph, PackageMetadata};
 use guppy::PackageId;
 use serde::Deserialize;
@@ -326,7 +327,7 @@ fn parse_rustc_dep_info(rustc_dep_info: &Path) -> HashSet<String> {
 }
 
 /// retrieves every single file in the folder of the dependency
-fn get_every_file_in_folder(package_path: &Path) -> HashSet<String> {
+fn get_every_file_in_folder(package_path: &Utf8Path) -> HashSet<String> {
     let mut dependency_files = HashSet::new();
     let walker = ignore::WalkBuilder::new(package_path).build();
     for result in walker {
@@ -353,7 +354,7 @@ fn get_every_file_in_folder(package_path: &Path) -> HashSet<String> {
 /// obtains a dependency's files (might be accurate or not)
 pub fn get_dependency_files(
     package_name: &str,
-    manifest_path: &Path,
+    manifest_path: &Utf8Path,
     target_dir: &Path,
 ) -> (bool, HashSet<String>) {
     use glob::glob;
