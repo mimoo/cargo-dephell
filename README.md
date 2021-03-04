@@ -19,7 +19,7 @@ cargo install --git https://github.com/mimoo/cargo-dephell
 Just run the program on the relevant `Cargo.toml` and output the result to an HTML file:
 
 ```sh
-cargo run -- --manifest-path ./Cargo.toml --o analysis_results.html
+cargo run -- --manifest-path ./Cargo.toml -o analysis_results.html
 ```
 
 Note that you might need a personnal access token to query the Github API. You can get one easily by following these steps:
